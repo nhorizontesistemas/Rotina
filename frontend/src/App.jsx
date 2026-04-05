@@ -25,18 +25,29 @@ function App() {
   const [routineCatalog, setRoutineCatalog] = useState([]);
   const [hydration, setHydration] = useState({ id: null, consumed: 0, goal: 2000 });
   const [dailyRoutines, setDailyRoutines] = useState([]);
+  
+  const [newRoutineName, setNewRoutineName] = useState('');
+  const [newRoutineTime, setNewRoutineTime] = useState('');
+  const [newRoutineIcon, setNewRoutineIcon] = useState('');
+  const [editingRoutine, setEditingRoutine] = useState(null);
 
   const dateKey = getDateKey(currentDate);
 
   const fetchDayData = () => {
+    console.log('Buscando dados do dia - dateKey:', dateKey, 'API_URL:', API_URL);
+    
     fetch(`${API_URL}/hydration/today/?date=${dateKey}`)
       .then(res => res.json())
-      .then(data => setHydration(data))
-      .catch(err => console.log('Backend not available yet', err));
+      .then(data => {
+        console.log('Dados de hidratação:', data);
+        setHydration(data);
+      })
+      .catch(err => console.error('Erro ao buscar hidratação:', err));
 
     fetch(`${API_URL}/logs/daily/?date=${dateKey}`)
       .then(res => res.json())
       .then(data => {
+        console.log('Logs do dia:', data);
         setDailyRoutines(data.map(log => ({
           log_id: log.id,
           id: log.routine,
@@ -47,14 +58,19 @@ function App() {
           notes: log.notes
         })));
       })
-      .catch(err => console.log('Backend err', err));
+      .catch(err => console.error('Erro ao buscar logs:', err));
   };
 
   const fetchCatalog = () => {
     fetch(`${API_URL}/routines/`)
       .then(res => res.json())
-      .then(data => setRoutineCatalog(data))
-      .catch(err => {});
+      .then(data => {
+        console.log('Catálogo carregado:', data);
+        setRoutineCatalog(data);
+      })
+      .catch(err => {
+        console.error('Erro ao carregar catálogo:', err);
+      });
   };
 
   useEffect(() => {
@@ -163,6 +179,62 @@ function App() {
   };
 
   const handleAddRoutine = async (data) => {
+    console.log('Adicionando rotina, data:', data);
+    const routineData = { 
+      name: data.name || newRoutineName, 
+      time: data.time || newRoutineTime || null,
+      icon: data.icon || newRoutineIcon || null
+    };
+
+    console.log('routineData para POST:', routineData);
+
+    if (!routineData.name) {
+      console.log('Nome vazio, retornando');
+      return;
+    }
+
+    try {
+      const res = await fetch(`${API_URL}/routines/`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(routineData)
+      });
+      
+      if (!res.ok) {
+        console.error('Erro na resposta:', res.status, res.statusText);
+        return;
+      }
+      
+      const routine = await res.json();
+      console.log('Rotina criada:', routine);
+
+      // Create log for today
+      const logRes = await fetch(`${API_URL}/logs/`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ routine: routine.id, date: dateKey })
+      });
+      
+      if (!logRes.ok) {
+        console.error('Erro ao criar log:', logRes.status);
+        return;
+      }
+      
+      console.log('Log criado para hoje');
+      setNewRoutineName('');
+      setNewRoutineTime('');
+      setNewRoutineIcon('');
+      setIsModalOpen(false);
+      fetchDayData();
+      fetchCatalog();
+    } catch (error) {
+      console.error('Erro ao adicionar rotina:', error);
+    }
+  };
+
+  const handleSaveRoutine = async (data) => {
+    if (!editingRoutine) return;
+    
     const routineData = { 
       name: data.name || newRoutineName, 
       time: data.time || newRoutineTime || null,
@@ -171,38 +243,10 @@ function App() {
 
     if (!routineData.name) return;
 
-    const res = await fetch(`${API_URL}/routines/`, {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify(routineData)
-    });
-    const routine = await res.json();
-
-    // Create log for today
-    await fetch(`${API_URL}/logs/`, {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ routine: routine.id, date: dateKey })
-    });
-
-    setNewRoutineName('');
-    setNewRoutineTime('');
-    setNewRoutineIcon('');
-    setIsModalOpen(false);
-    fetchDayData();
-    fetchCatalog();
-  };
-
-  const handleSaveRoutine = async () => {
-    if (!newRoutineName || !editingRoutine) return;
     await fetch(`${API_URL}/routines/${editingRoutine.id}/`, {
       method: 'PATCH',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ 
-        name: newRoutineName, 
-        time: newRoutineTime || null,
-        icon: newRoutineIcon || null
-      })
+      body: JSON.stringify(routineData)
     });
     setEditingRoutine(null);
     setNewRoutineName('');
@@ -294,9 +338,10 @@ function App() {
       <AddRoutineModal 
         isOpen={isModalOpen} 
         onClose={() => setIsModalOpen(false)} 
-        onAdd={handleAddRoutine} 
+        onAdd={editingRoutine ? handleSaveRoutine : handleAddRoutine} 
         catalog={routineCatalog}
         onDeleteFromCatalog={handleDeleteFromCatalog}
+        initialData={editingRoutine}
       />
     </div>
   )
