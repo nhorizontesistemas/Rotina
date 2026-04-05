@@ -210,6 +210,7 @@ function App() {
     setNewRoutineIcon('');
     setIsModalOpen(false);
     fetchDayData();
+    fetchCatalog();
   };
 
   const handleDeleteFromCatalog = async (id) => {
