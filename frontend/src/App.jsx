@@ -8,7 +8,9 @@ import AddRoutineModal from './AddRoutineModal'
 import { Plus, ListTodo, Wallet } from 'lucide-react'
 import FinancesScreen from './FinancesScreen'
 
-const API_URL = `http://${window.location.hostname}:8000/api`;
+const API_URL = window.location.hostname === 'localhost' 
+  ? `http://${window.location.hostname}:8000/api`
+  : `${window.location.origin}/_/backend/api`;
 
 function getDateKey(date) {
   const d = new Date(date);
