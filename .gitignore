@@ -1,0 +1,62 @@
+# =========================
+# Python / Django
+# =========================
+*.pyc
+*.pyo
+*.pyd
+__pycache__/
+*.sqlite3
+*.log
+*.pot
+*.py[cod]
+*.swp
+*.swo
+*.DS_Store
+
+# Environments
+env/
+venv/
+ENV/
+.venv/
+.idea/
+.vscode/
+
+# Django migrations
+*/migrations/*.py
+!*/migrations/__init__.py
+
+# Django static & media files
+staticfiles/
+media/
+
+# =========================
+# Node / React
+# =========================
+node_modules/
+npm-debug.log*
+yarn-error.log*
+yarn-debug.log*
+build/
+dist/
+.cache/
+*.env
+
+# =========================
+# IDEs and Editors
+# =========================
+.vscode/
+.idea/
+*.sublime-project
+*.sublime-workspace
+
+# =========================
+# System Files
+# =========================
+.DS_Store
+Thumbs.db
+
+# =========================
+# Miscellaneous
+# =========================
+*.bak
+*.swp
