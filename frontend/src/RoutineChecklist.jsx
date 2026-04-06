@@ -6,7 +6,10 @@ export default function RoutineChecklist({ routines, onToggle, onDelete, onEdit,
     <div className="routine-list">
       {routines.map((routine) => (
         <div key={routine.id} style={{ display: 'flex', flexDirection: 'column', gap: '5px' }}>
-          <div className={`routine-item ${routine.completed ? 'completed' : ''}`}>
+          <div
+            className={`routine-item ${routine.completed ? 'completed' : ''}`}
+            style={{ borderLeft: `4px solid ${routine.color || '#2563eb'}` }}
+          >
             <div className="routine-info" onClick={() => onToggle(routine.id)} style={{ flex: 1, cursor: 'pointer' }}>
               <h4>
                 <span style={{ marginRight: '8px' }}>{routine.icon || '✨'}</span>

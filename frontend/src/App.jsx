@@ -18,6 +18,13 @@ function getDateKey(date) {
   return d.toISOString().split('T')[0];
 }
 
+function timeToMinutes(time) {
+  if (!time) return null;
+  const [hours, minutes] = time.split(':').map(Number);
+  if (Number.isNaN(hours) || Number.isNaN(minutes)) return null;
+  return (hours * 60) + minutes;
+}
+
 function App() {
   const [currentDate, setCurrentDate] = useState(new Date());
   const [isModalOpen, setIsModalOpen] = useState(false);
@@ -29,6 +36,7 @@ function App() {
   const [newRoutineName, setNewRoutineName] = useState('');
   const [newRoutineTime, setNewRoutineTime] = useState('');
   const [newRoutineIcon, setNewRoutineIcon] = useState('');
+  const [newRoutineColor, setNewRoutineColor] = useState('#2563eb');
   const [editingRoutine, setEditingRoutine] = useState(null);
 
   const dateKey = getDateKey(currentDate);
@@ -48,15 +56,30 @@ function App() {
       .then(res => res.json())
       .then(data => {
         console.log('Logs do dia:', data);
-        setDailyRoutines(data.map(log => ({
+        const mappedRoutines = data.map(log => ({
           log_id: log.id,
           id: log.routine,
           name: log.routine_name,
           time: log.routine_time,
           icon: log.routine_icon,
+          color: log.routine_color,
           completed: log.completed,
           notes: log.notes
-        })));
+        }));
+
+        mappedRoutines.sort((a, b) => {
+          const aMinutes = timeToMinutes(a.time);
+          const bMinutes = timeToMinutes(b.time);
+
+          if (aMinutes === null && bMinutes === null) {
+            return a.name.localeCompare(b.name, 'pt-BR');
+          }
+          if (aMinutes === null) return 1;
+          if (bMinutes === null) return -1;
+          return aMinutes - bMinutes;
+        });
+
+        setDailyRoutines(mappedRoutines);
       })
       .catch(err => console.error('Erro ao buscar logs:', err));
   };
@@ -175,6 +198,7 @@ function App() {
     setNewRoutineName(r.name);
     setNewRoutineTime(r.time || '');
     setNewRoutineIcon(r.icon || '');
+    setNewRoutineColor(r.color || '#2563eb');
     setIsModalOpen(true);
   };
 
@@ -183,7 +207,8 @@ function App() {
     const routineData = { 
       name: data.name || newRoutineName, 
       time: data.time || newRoutineTime || null,
-      icon: data.icon || newRoutineIcon || null
+      icon: data.icon || newRoutineIcon || null,
+      color: data.color || newRoutineColor || null
     };
 
     console.log('routineData para POST:', routineData);
@@ -224,6 +249,7 @@ function App() {
       setNewRoutineName('');
       setNewRoutineTime('');
       setNewRoutineIcon('');
+      setNewRoutineColor('#2563eb');
       setIsModalOpen(false);
       fetchDayData();
       fetchCatalog();
@@ -238,7 +264,8 @@ function App() {
     const routineData = { 
       name: data.name || newRoutineName, 
       time: data.time || newRoutineTime || null,
-      icon: data.icon || newRoutineIcon || null
+      icon: data.icon || newRoutineIcon || null,
+      color: data.color || newRoutineColor || null
     };
 
     if (!routineData.name) return;
@@ -252,6 +279,7 @@ function App() {
     setNewRoutineName('');
     setNewRoutineTime('');
     setNewRoutineIcon('');
+    setNewRoutineColor('#2563eb');
     setIsModalOpen(false);
     fetchDayData();
     fetchCatalog();

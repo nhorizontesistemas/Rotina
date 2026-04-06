@@ -5,6 +5,7 @@ export default function AddRoutineModal({ isOpen, onClose, onAdd, catalog, onDel
   const [name, setName] = useState('');
   const [time, setTime] = useState('');
   const [icon, setIcon] = useState('');
+  const [color, setColor] = useState('#2563eb');
   const [isCreatingNew, setIsCreatingNew] = useState(true);
 
   React.useEffect(() => {
@@ -12,6 +13,7 @@ export default function AddRoutineModal({ isOpen, onClose, onAdd, catalog, onDel
       setName(initialData?.name || '');
       setTime(initialData?.time || '');
       setIcon(initialData?.icon || '');
+      setColor(initialData?.color || '#2563eb');
       if (initialData) setIsCreatingNew(true); // Always show form when editing
     }
   }, [isOpen, initialData]);
@@ -23,10 +25,11 @@ export default function AddRoutineModal({ isOpen, onClose, onAdd, catalog, onDel
   const handleSubmit = (e) => {
     e.preventDefault();
     if (name.trim()) {
-      onAdd({ name: name.trim(), time: time || null, icon: icon || null });
+      onAdd({ name: name.trim(), time: time || null, icon: icon || null, color: color || null });
       setName('');
       setTime('');
       setIcon('');
+      setColor('#2563eb');
       onClose();
     }
   };
@@ -72,6 +75,17 @@ export default function AddRoutineModal({ isOpen, onClose, onAdd, catalog, onDel
               onChange={e => setTime(e.target.value)}
               style={styles.input}
             />
+            <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
+              <label htmlFor="routine-color" style={{ color: 'var(--text-muted)', fontSize: '14px', minWidth: '40px' }}>Cor</label>
+              <input
+                id="routine-color"
+                type="color"
+                value={color}
+                onChange={(e) => setColor(e.target.value)}
+                style={styles.colorInput}
+              />
+              <span style={styles.colorCode}>{color}</span>
+            </div>
             <button type="submit" style={styles.submitBtn}>
               Criar e Adicionar
             </button>
@@ -147,6 +161,20 @@ const styles = {
     border: '1px solid #e5e7eb',
     fontSize: '16px',
     outline: 'none'
+  },
+  colorInput: {
+    width: '44px',
+    height: '34px',
+    border: '1px solid #e5e7eb',
+    borderRadius: '8px',
+    backgroundColor: 'transparent',
+    cursor: 'pointer',
+    padding: '2px'
+  },
+  colorCode: {
+    fontSize: '12px',
+    color: 'var(--text-muted)',
+    letterSpacing: '0.02em'
   },
   submitBtn: {
     padding: '12px',

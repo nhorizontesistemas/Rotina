@@ -12,6 +12,7 @@ class Routine(models.Model):
     name = models.CharField(max_length=255)
     time = models.TimeField(null=True, blank=True)
     icon = models.CharField(max_length=20, null=True, blank=True)
+    color = models.CharField(max_length=7, null=True, blank=True)
     created_at = models.DateTimeField(auto_now_add=True)
 
     def __str__(self):

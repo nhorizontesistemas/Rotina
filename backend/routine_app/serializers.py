@@ -15,6 +15,7 @@ class RoutineLogSerializer(serializers.ModelSerializer):
     routine_name = serializers.CharField(source='routine.name', read_only=True)
     routine_time = serializers.TimeField(source='routine.time', read_only=True)
     routine_icon = serializers.CharField(source='routine.icon', read_only=True)
+    routine_color = serializers.CharField(source='routine.color', read_only=True)
 
     class Meta:
         model = RoutineLog
