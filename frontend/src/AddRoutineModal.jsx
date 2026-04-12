@@ -1,10 +1,23 @@
 import React, { useState } from 'react';
 import { Trash2 } from 'lucide-react';
 
+const STICKER_OPTIONS = [
+  '😀', '😄', '😁', '😂', '🤣', '😊', '🙂', '😉', '😍', '🥰', '😘', '😋',
+  '😎', '🤩', '🥳', '🤗', '😴', '🤔', '🫡', '🙌', '👏', '👍', '🤝', '💯',
+  '🔥', '✨', '⭐', '🌟', '💪', '🧠', '🎯', '🚀', '⚡', '📈', '🏆', '🥇',
+  '📚', '📝', '📌', '✅', '☑️', '⏰', '⏳', '📅', '🗂️', '📎', '💡', '🧩',
+  '💼', '🧑‍💻', '👩‍💻', '👨‍💻', '📊', '🧮', '🧾', '💰', '💵', '💳', '🏦', '🛍️',
+  '🏃', '🏃‍♀️', '🏃‍♂️', '🚴', '🚶', '🧘', '🏋️', '🤸', '⚽', '🏀', '🎾', '🥊',
+  '💧', '🥤', '☕', '🍵', '🍎', '🍌', '🥗', '🥦', '🍳', '🍞', '🍚', '🍽️',
+  '💊', '🩺', '🩹', '💉', '🧪', '🌡️', '🧬', '🫀',
+  '🏠', '🛏️', '🧹', '🧺', '🧼', '🛒', '🚗', '🚌', '✈️', '📦', '🔧', '🔋',
+  '🎵', '🎧', '🎬', '📸', '🎨', '🕹️', '🎲', '📖', '📰', '🌈', '🌻', '🌙'
+];
+
 export default function AddRoutineModal({ isOpen, onClose, onAdd, catalog, onDeleteFromCatalog, initialData }) {
   const [name, setName] = useState('');
   const [time, setTime] = useState('');
-  const [icon, setIcon] = useState('');
+  const [icon, setIcon] = useState(STICKER_OPTIONS[0]);
   const [color, setColor] = useState('#2563eb');
   const [isCreatingNew, setIsCreatingNew] = useState(true);
 
@@ -12,7 +25,7 @@ export default function AddRoutineModal({ isOpen, onClose, onAdd, catalog, onDel
     if (isOpen) {
       setName(initialData?.name || '');
       setTime(initialData?.time || '');
-      setIcon(initialData?.icon || '');
+      setIcon(initialData?.icon || STICKER_OPTIONS[0]);
       setColor(initialData?.color || '#2563eb');
       if (initialData) setIsCreatingNew(true); // Always show form when editing
     }
@@ -28,7 +41,7 @@ export default function AddRoutineModal({ isOpen, onClose, onAdd, catalog, onDel
       onAdd({ name: name.trim(), time: time || null, icon: icon || null, color: color || null });
       setName('');
       setTime('');
-      setIcon('');
+      setIcon(STICKER_OPTIONS[0]);
       setColor('#2563eb');
       onClose();
     }
@@ -51,15 +64,29 @@ export default function AddRoutineModal({ isOpen, onClose, onAdd, catalog, onDel
 
         {isCreatingNew || !catalog || catalog.length === 0 ? (
           <form onSubmit={handleSubmit} style={styles.form}>
+            <div style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
+              <label style={styles.pickerLabel}>Figurinha</label>
+              <div style={styles.stickerGrid}>
+                {STICKER_OPTIONS.map((sticker) => {
+                  const isSelected = icon === sticker;
+                  return (
+                    <button
+                      key={sticker}
+                      type="button"
+                      onClick={() => setIcon(sticker)}
+                      style={{
+                        ...styles.stickerBtn,
+                        ...(isSelected ? styles.stickerBtnActive : {})
+                      }}
+                      aria-label={`Selecionar figurinha ${sticker}`}
+                    >
+                      {sticker}
+                    </button>
+                  );
+                })}
+              </div>
+            </div>
             <div style={{ display: 'flex', gap: '10px' }}>
-              <input 
-                type="text" 
-                placeholder="🚀" 
-                value={icon}
-                onChange={e => setIcon(e.target.value)}
-                style={{ ...styles.input, width: '45px', textAlign: 'center', fontSize: '20px' }}
-                maxLength={2}
-              />
               <input 
                 type="text" 
                 placeholder="Nome da rotina (ex: Treino)" 
@@ -154,6 +181,37 @@ const styles = {
     display: 'flex',
     flexDirection: 'column',
     gap: '12px'
+  },
+  pickerLabel: {
+    color: 'var(--text-muted)',
+    fontSize: '14px',
+    fontWeight: '600'
+  },
+  stickerGrid: {
+    display: 'grid',
+    gridTemplateColumns: 'repeat(8, minmax(0, 1fr))',
+    gap: '8px',
+    maxHeight: '132px',
+    overflowY: 'auto',
+    padding: '2px'
+  },
+  stickerBtn: {
+    border: '1px solid #e5e7eb',
+    borderRadius: '10px',
+    background: 'white',
+    height: '34px',
+    cursor: 'pointer',
+    fontSize: '20px',
+    lineHeight: 1,
+    display: 'flex',
+    alignItems: 'center',
+    justifyContent: 'center',
+    transition: 'all 0.2s ease'
+  },
+  stickerBtnActive: {
+    border: '2px solid var(--primary-color)',
+    background: 'rgba(59, 130, 246, 0.12)',
+    transform: 'scale(1.03)'
   },
   input: {
     padding: '12px',
