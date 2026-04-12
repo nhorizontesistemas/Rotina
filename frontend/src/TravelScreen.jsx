@@ -1,5 +1,5 @@
 import React, { useEffect, useRef, useState } from 'react';
-import { Plus, Plane, BedDouble, Trash2, Edit2, Route, Ticket, Fuel } from 'lucide-react';
+import { Plus, Plane, BedDouble, Trash2, Edit2, Route, Ticket, Fuel, CheckCircle2, Circle } from 'lucide-react';
 
 const transportLabels = {
   CAR: 'Carro',
@@ -45,9 +45,23 @@ function toMoney(value) {
   return Number(value || 0).toFixed(2);
 }
 
+function formatDateBr(value) {
+  if (!value) return '';
+  const parts = String(value).split('-');
+  if (parts.length !== 3) return value;
+  return `${parts[2]}/${parts[1]}/${parts[0]}`;
+}
+
+function formatTime(value) {
+  if (!value) return '';
+  return String(value).slice(0, 5);
+}
+
 function buildTripDraft(trip) {
   return {
     destination_name: trip?.destination_name || '',
+    departure_date: trip?.departure_date || '',
+    return_date: trip?.return_date || '',
     total_distance: trip?.total_distance || '',
     transport_type: trip?.transport_type || 'CAR',
     toll_total: trip?.toll_total || '0.00',
@@ -59,6 +73,8 @@ function buildAccommodationDraft(item) {
   return {
     accommodation_type: item?.accommodation_type || 'Hotel',
     accommodation_name: item?.accommodation_name || '',
+    event_date: item?.event_date || '',
+    event_time: item?.event_time || '',
     expected_value: item?.expected_value || item?.accommodation_total || '0.00',
     real_value: item?.real_value || item?.accommodation_total || '0.00',
     notes: item?.notes || ''
@@ -69,6 +85,8 @@ function buildItineraryDraft(item) {
   return {
     item_type: item?.item_type || 'BREAKFAST',
     description: item?.description || '',
+    event_date: item?.event_date || '',
+    event_time: item?.event_time || '',
     expected_value: item?.expected_value || item?.value || '0.00',
     real_value: item?.real_value || item?.value || '0.00',
     notes: item?.notes || ''
@@ -82,6 +100,37 @@ function groupItineraryByType(items) {
     if (map.has(item.item_type)) map.get(item.item_type).items.push(item);
   });
   return groups.filter((g) => g.items.length > 0);
+}
+
+function sortByDateTime(items) {
+  return [...(items || [])].sort((a, b) => {
+    const aDate = a.event_date || '9999-12-31';
+    const bDate = b.event_date || '9999-12-31';
+    if (aDate !== bDate) return aDate.localeCompare(bDate);
+
+    const aTime = a.event_time || '23:59:59';
+    const bTime = b.event_time || '23:59:59';
+    if (aTime !== bTime) return aTime.localeCompare(bTime);
+
+    return (a.description || a.accommodation_name || '').localeCompare(
+      b.description || b.accommodation_name || '',
+      'pt-BR'
+    );
+  });
+}
+
+function groupItemsByDate(items) {
+  const grouped = new Map();
+  sortByDateTime(items).forEach((item) => {
+    const key = item.event_date || 'Sem data';
+    if (!grouped.has(key)) grouped.set(key, []);
+    grouped.get(key).push(item);
+  });
+  return Array.from(grouped.entries()).map(([date, rows]) => ({
+    date,
+    displayDate: date === 'Sem data' ? date : formatDateBr(date),
+    rows
+  }));
 }
 
 function getTripSummary(trip) {
@@ -451,6 +500,8 @@ export default function TravelScreen({ API_URL }) {
 
     const payload = {
       ...tripDraft,
+      departure_date: tripDraft.departure_date || null,
+      return_date: tripDraft.return_date || null,
       total_distance: Number(tripDraft.total_distance || 0),
       toll_total: Number(tripDraft.toll_total || 0),
       fuel_estimate: Number(tripDraft.fuel_estimate || 0)
@@ -517,6 +568,8 @@ export default function TravelScreen({ API_URL }) {
     const payload = {
       ...itineraryDraft,
       travel_plan: activeTrip.id,
+      event_date: itineraryDraft.event_date || null,
+      event_time: itineraryDraft.event_time || null,
       expected_value: Number(itineraryDraft.expected_value || 0),
       real_value: Number(itineraryDraft.real_value || 0),
       notes: itineraryDraft.notes || null
@@ -578,6 +631,33 @@ export default function TravelScreen({ API_URL }) {
     if (editingItineraryId === itemId) resetItineraryForm();
   };
 
+  const handleToggleItineraryCompleted = async (itemId, tripId, currentValue) => {
+    const nextValue = !currentValue;
+    const previousTrips = trips;
+
+    setTrips((prev) => prev.map((trip) => (
+      trip.id === tripId
+        ? {
+          ...trip,
+          itinerary_items: (trip.itinerary_items || []).map((item) => (
+            item.id === itemId ? { ...item, is_completed: nextValue } : item
+          ))
+        }
+        : trip
+    )));
+
+    const response = await fetch(`${API_URL}/travel-itinerary-items/${itemId}/`, {
+      method: 'PATCH',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ is_completed: nextValue })
+    });
+
+    if (!response.ok) {
+      setTrips(previousTrips);
+      fetchTrips();
+    }
+  };
+
   const handleSaveAccommodation = async (e) => {
     e.preventDefault();
     if (!activeTrip || !accommodationDraft.accommodation_name.trim() || !accommodationDraft.accommodation_type) return;
@@ -585,6 +665,8 @@ export default function TravelScreen({ API_URL }) {
     const payload = {
       ...accommodationDraft,
       travel_plan: activeTrip.id,
+      event_date: accommodationDraft.event_date || null,
+      event_time: accommodationDraft.event_time || null,
       expected_value: Number(accommodationDraft.expected_value || 0),
       real_value: Number(accommodationDraft.real_value || 0),
       accommodation_total: Number(accommodationDraft.real_value || 0),
@@ -645,6 +727,33 @@ export default function TravelScreen({ API_URL }) {
       return;
     }
     if (editingAccommodationId === itemId) resetAccommodationForm();
+  };
+
+  const handleToggleAccommodationCompleted = async (itemId, tripId, currentValue) => {
+    const nextValue = !currentValue;
+    const previousTrips = trips;
+
+    setTrips((prev) => prev.map((trip) => (
+      trip.id === tripId
+        ? {
+          ...trip,
+          accommodation_items: (trip.accommodation_items || []).map((item) => (
+            item.id === itemId ? { ...item, is_completed: nextValue } : item
+          ))
+        }
+        : trip
+    )));
+
+    const response = await fetch(`${API_URL}/travel-accommodation-items/${itemId}/`, {
+      method: 'PATCH',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ is_completed: nextValue })
+    });
+
+    if (!response.ok) {
+      setTrips(previousTrips);
+      fetchTrips();
+    }
   };
 
   return (
@@ -827,6 +936,24 @@ export default function TravelScreen({ API_URL }) {
               />
             </div>
             <div style={styles.fieldBlock}>
+              <label style={styles.fieldLabel}>Data de ida</label>
+              <input
+                type="date"
+                value={tripDraft.departure_date}
+                onChange={(e) => setTripDraft((prev) => ({ ...prev, departure_date: e.target.value }))}
+                style={styles.input}
+              />
+            </div>
+            <div style={styles.fieldBlock}>
+              <label style={styles.fieldLabel}>Data de volta</label>
+              <input
+                type="date"
+                value={tripDraft.return_date}
+                onChange={(e) => setTripDraft((prev) => ({ ...prev, return_date: e.target.value }))}
+                style={styles.input}
+              />
+            </div>
+            <div style={styles.fieldBlock}>
               <label style={styles.fieldLabel}>Distancia total (km)</label>
               <input
                 type="number"
@@ -898,7 +1025,8 @@ export default function TravelScreen({ API_URL }) {
               const isActive = trip.id === activeTripId;
               const isExpanded = trip.id === expandedTripId;
               const tripSummary = getTripSummary(trip);
-              const tripItineraryGroups = isExpanded ? groupItineraryByType(trip.itinerary_items || []) : [];
+              const itineraryByDate = isExpanded ? groupItemsByDate(trip.itinerary_items || []) : [];
+              const accommodationByDate = isExpanded ? groupItemsByDate(trip.accommodation_items || []) : [];
               return (
                 <div key={trip.id} style={{ ...styles.tripCard, ...(isActive ? styles.tripCardActive : {}) }}>
                   <div style={styles.tripCardTopRow}>
@@ -913,6 +1041,9 @@ export default function TravelScreen({ API_URL }) {
                         <div>
                           <strong style={styles.tripName}>{trip.destination_name}</strong>
                           <span style={styles.tripMeta}>{transportLabels[trip.transport_type] || trip.transport_type} • {Number(trip.total_distance || 0).toFixed(0)} km</span>
+                          {(trip.departure_date || trip.return_date) && (
+                            <span style={styles.tripMeta}>🗓️ {trip.departure_date ? formatDateBr(trip.departure_date) : '-'} até {trip.return_date ? formatDateBr(trip.return_date) : '-'}</span>
+                          )}
                           <span style={styles.tripMeta}>{(trip.itinerary_items || []).length} roteiros • {(trip.accommodation_items || []).length} acomodacoes</span>
                           <span style={styles.tripMeta}>Total previsto: R$ {toMoney(tripSummary.expectedTotal)} • Real: R$ {toMoney(tripSummary.realTotal)}</span>
                           <span style={styles.expandHint}>{isExpanded ? 'Toque para ocultar detalhes' : 'Toque para ver roteiros e acomodacoes'}</span>
@@ -948,41 +1079,46 @@ export default function TravelScreen({ API_URL }) {
                           <p style={styles.emptyState}>Nenhum roteiro adicionado para esta viagem.</p>
                         ) : (
                           <div style={styles.listColumn}>
-                            {tripItineraryGroups.map((group) => (
-                              <div key={`${trip.id}-${group.type}`} style={styles.comboGroupCard}>
-                                <div style={styles.comboGroupHeader}>
-                                  <strong style={styles.comboGroupTitle}><span style={{ marginRight: '6px' }}>{itineraryTypeIcons[group.type]}</span>{itineraryTypeLabels[group.type]}</strong>
-                                  <span style={styles.smallText}>{group.items.length} itens</span>
+                            {itineraryByDate.map((group) => (
+                              <div key={`it-${trip.id}-${group.date}`} style={styles.groupCard}>
+                                <div style={styles.groupTitleRow}>
+                                  <strong style={styles.groupTitle}>{group.displayDate}</strong>
+                                  <span style={styles.groupCount}>{group.rows.length} item{group.rows.length > 1 ? 's' : ''}</span>
                                 </div>
-                                <div style={styles.listColumn}>
-                                  {group.items.map((item) => (
-                                    <div key={item.id} style={styles.comboCard}>
-                                      <div style={{ flex: 1 }}>
-                                        <strong style={styles.tripName}>{item.description}</strong>
-                                        <div style={styles.comboValuesRow}>
-                                          <span style={styles.expectedPill}>Estimado: R$ {toMoney(item.expected_value || item.value)}</span>
-                                          <span style={styles.realPill}>Real: R$ {toMoney(item.real_value || item.value)}</span>
-                                        </div>
-                                        {item.notes && <span style={styles.tripMeta}>{item.notes}</span>}
-                                      </div>
-                                      <div style={styles.inlineActions}>
-                                        <button onClick={() => handleEditItinerary(item, trip.id)} style={styles.iconButton} title="Editar roteiro">
-                                          <Edit2 size={16} />
-                                        </button>
-                                        <button onClick={() => handleDeleteItinerary(item.id, trip.id)} style={styles.iconButton} title="Excluir roteiro">
-                                          <Trash2 size={16} />
-                                        </button>
-                                      </div>
+                                {group.rows.map((item) => (
+                                  <div key={item.id} style={styles.itemRowCard}>
+                                    <button
+                                      type="button"
+                                      onClick={() => handleToggleItineraryCompleted(item.id, trip.id, item.is_completed)}
+                                      style={styles.checkButton}
+                                      title={item.is_completed ? 'Marcar como pendente' : 'Marcar como concluido'}
+                                    >
+                                      {item.is_completed ? <CheckCircle2 size={18} color="#0f766e" /> : <Circle size={18} color="#64748b" />}
+                                    </button>
+                                    <div style={styles.itemMetaGroup}>
+                                      <span style={styles.timePill}>{item.event_time ? formatTime(item.event_time) : 'Sem hora'}</span>
                                     </div>
-                                  ))}
-                                </div>
+                                    <div style={styles.simpleDescriptionCell}>
+                                      <span style={{ ...styles.descriptionText, ...(item.is_completed ? styles.rowCompleted : {}) }}>{item.description}</span>
+                                    </div>
+                                    <span style={styles.simpleValueCell}>R$ {toMoney(item.expected_value || item.value)}</span>
+                                    <div style={styles.simpleActionCell}>
+                                      <button onClick={() => handleEditItinerary(item, trip.id)} style={styles.iconButton} title="Editar roteiro">
+                                        <Edit2 size={16} />
+                                      </button>
+                                      <button onClick={() => handleDeleteItinerary(item.id, trip.id)} style={styles.iconButton} title="Excluir roteiro">
+                                        <Trash2 size={16} />
+                                      </button>
+                                    </div>
+                                  </div>
+                                ))}
                               </div>
                             ))}
                           </div>
                         )}
-                      </div>
 
-                      <div style={styles.tripDetailsBlock}>
+                        <div style={styles.detailsDivider} />
+
                         <div style={styles.sectionHeader}>
                           <h4 style={styles.tripDetailsTitle}>Acomodacoes</h4>
                           <span style={styles.smallText}>{(trip.accommodation_items || []).length} itens</span>
@@ -991,25 +1127,39 @@ export default function TravelScreen({ API_URL }) {
                           <p style={styles.emptyState}>Nenhuma acomodacao adicionada para esta viagem.</p>
                         ) : (
                           <div style={styles.listColumn}>
-                            {(trip.accommodation_items || []).map((item) => (
-                              <div key={item.id} style={styles.comboCard}>
-                                <div style={{ flex: 1 }}>
-                                  <strong style={styles.tripName}>{item.accommodation_name}</strong>
-                                  <span style={styles.tripMeta}>{item.accommodation_type}</span>
-                                  {item.notes && <span style={styles.tripMeta}>{item.notes}</span>}
-                                  <div style={styles.comboValuesRow}>
-                                    <span style={styles.expectedPill}>Estimado: R$ {toMoney(item.expected_value || item.accommodation_total)}</span>
-                                    <span style={styles.realPill}>Real: R$ {toMoney(item.real_value || item.accommodation_total)}</span>
+                            {accommodationByDate.map((group) => (
+                              <div key={`ac-${trip.id}-${group.date}`} style={styles.groupCard}>
+                                <div style={styles.groupTitleRow}>
+                                  <strong style={styles.groupTitle}>{group.displayDate}</strong>
+                                  <span style={styles.groupCount}>{group.rows.length} item{group.rows.length > 1 ? 's' : ''}</span>
+                                </div>
+                                {group.rows.map((item) => (
+                                  <div key={item.id} style={styles.itemRowCard}>
+                                    <button
+                                      type="button"
+                                      onClick={() => handleToggleAccommodationCompleted(item.id, trip.id, item.is_completed)}
+                                      style={styles.checkButton}
+                                      title={item.is_completed ? 'Marcar como pendente' : 'Marcar como concluido'}
+                                    >
+                                      {item.is_completed ? <CheckCircle2 size={18} color="#0f766e" /> : <Circle size={18} color="#64748b" />}
+                                    </button>
+                                    <div style={styles.itemMetaGroup}>
+                                      <span style={styles.timePill}>{item.event_time ? formatTime(item.event_time) : 'Sem hora'}</span>
+                                    </div>
+                                    <div style={styles.simpleDescriptionCell}>
+                                      <span style={{ ...styles.descriptionText, ...(item.is_completed ? styles.rowCompleted : {}) }}>{item.accommodation_name}</span>
+                                    </div>
+                                    <span style={styles.simpleValueCell}>R$ {toMoney(item.expected_value || item.accommodation_total)}</span>
+                                    <div style={styles.simpleActionCell}>
+                                      <button onClick={() => handleEditAccommodation(item, trip.id)} style={styles.iconButton} title="Editar acomodacao">
+                                        <Edit2 size={16} />
+                                      </button>
+                                      <button onClick={() => handleDeleteAccommodation(item.id, trip.id)} style={styles.iconButton} title="Excluir acomodacao">
+                                        <Trash2 size={16} />
+                                      </button>
+                                    </div>
                                   </div>
-                                </div>
-                                <div style={styles.inlineActions}>
-                                  <button onClick={() => handleEditAccommodation(item, trip.id)} style={styles.iconButton} title="Editar acomodacao">
-                                    <Edit2 size={16} />
-                                  </button>
-                                  <button onClick={() => handleDeleteAccommodation(item.id, trip.id)} style={styles.iconButton} title="Excluir acomodacao">
-                                    <Trash2 size={16} />
-                                  </button>
-                                </div>
+                                ))}
                               </div>
                             ))}
                           </div>
@@ -1090,6 +1240,26 @@ export default function TravelScreen({ API_URL }) {
                     style={styles.input}
                   />
                 </div>
+                <div style={styles.routeRow}>
+                  <div style={styles.fieldBlock}>
+                    <label style={styles.fieldLabel}>Data</label>
+                    <input
+                      type="date"
+                      value={itineraryDraft.event_date}
+                      onChange={(e) => setItineraryDraft((prev) => ({ ...prev, event_date: e.target.value }))}
+                      style={styles.input}
+                    />
+                  </div>
+                  <div style={styles.fieldBlock}>
+                    <label style={styles.fieldLabel}>Hora</label>
+                    <input
+                      type="time"
+                      value={itineraryDraft.event_time}
+                      onChange={(e) => setItineraryDraft((prev) => ({ ...prev, event_time: e.target.value }))}
+                      style={styles.input}
+                    />
+                  </div>
+                </div>
                 <div style={styles.fieldBlock}>
                   <label style={styles.fieldLabel}>Valor estimado</label>
                   <div style={styles.moneyInputWrapper}>
@@ -1153,6 +1323,26 @@ export default function TravelScreen({ API_URL }) {
                     onChange={(e) => setAccommodationDraft((prev) => ({ ...prev, accommodation_name: e.target.value }))}
                     style={styles.input}
                   />
+                </div>
+                <div style={styles.routeRow}>
+                  <div style={styles.fieldBlock}>
+                    <label style={styles.fieldLabel}>Data</label>
+                    <input
+                      type="date"
+                      value={accommodationDraft.event_date}
+                      onChange={(e) => setAccommodationDraft((prev) => ({ ...prev, event_date: e.target.value }))}
+                      style={styles.input}
+                    />
+                  </div>
+                  <div style={styles.fieldBlock}>
+                    <label style={styles.fieldLabel}>Hora</label>
+                    <input
+                      type="time"
+                      value={accommodationDraft.event_time}
+                      onChange={(e) => setAccommodationDraft((prev) => ({ ...prev, event_time: e.target.value }))}
+                      style={styles.input}
+                    />
+                  </div>
                 </div>
                 <div style={styles.fieldBlock}>
                   <label style={styles.fieldLabel}>Valor estimado</label>
@@ -1604,6 +1794,113 @@ const styles = {
     gap: '8px',
     marginTop: '6px',
     flexWrap: 'wrap'
+  },
+  groupCard: {
+    background: 'linear-gradient(180deg, #ffffff 0%, #f8fafc 100%)',
+    border: '1px solid #dbeafe',
+    borderRadius: '14px',
+    padding: '12px',
+    boxShadow: '0 6px 16px rgba(15, 23, 42, 0.04)'
+  },
+  groupTitleRow: {
+    display: 'flex',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    marginBottom: '10px',
+    gap: '10px'
+  },
+  groupTitle: {
+    color: '#0f766e',
+    fontSize: '13px',
+    fontWeight: '800'
+  },
+  groupCount: {
+    fontSize: '11px',
+    color: '#64748b',
+    fontWeight: '700',
+    background: '#eff6ff',
+    border: '1px solid #dbeafe',
+    borderRadius: '999px',
+    padding: '4px 8px',
+    whiteSpace: 'nowrap'
+  },
+  itemRowCard: {
+    display: 'flex',
+    alignItems: 'center',
+    gap: '8px',
+    fontSize: '12px',
+    color: '#0f172a',
+    padding: '10px 0',
+    borderTop: '1px solid #eef2ff'
+  },
+  itemMetaGroup: {
+    display: 'flex',
+    alignItems: 'center',
+    gap: '6px',
+    flexShrink: 0,
+    minWidth: 0
+  },
+  simpleDescriptionCell: {
+    display: 'flex',
+    alignItems: 'center',
+    minWidth: 0,
+    flex: 1
+  },
+  descriptionText: {
+    display: 'block',
+    minWidth: 0,
+    overflow: 'hidden',
+    textOverflow: 'ellipsis',
+    whiteSpace: 'nowrap',
+    lineHeight: '1.35',
+    fontWeight: '600',
+    color: '#0f172a'
+  },
+  simpleValueCell: {
+    flexShrink: 0,
+    whiteSpace: 'nowrap',
+    fontWeight: '700',
+    color: '#0f766e'
+  },
+  simpleActionCell: {
+    display: 'flex',
+    justifyContent: 'flex-end',
+    gap: '2px',
+    alignItems: 'center',
+    flexShrink: 0
+  },
+  timePill: {
+    display: 'inline-flex',
+    alignItems: 'center',
+    alignSelf: 'flex-start',
+    background: '#ecfeff',
+    color: '#155e75',
+    border: '1px solid #bae6fd',
+    borderRadius: '999px',
+    padding: '3px 8px',
+    fontSize: '11px',
+    fontWeight: '700',
+    whiteSpace: 'nowrap'
+  },
+  checkButton: {
+    border: 'none',
+    background: 'transparent',
+    cursor: 'pointer',
+    display: 'flex',
+    alignItems: 'center',
+    justifyContent: 'center',
+    padding: '0',
+    width: '28px',
+    height: '28px',
+    borderRadius: '999px'
+  },
+  rowCompleted: {
+    textDecoration: 'line-through',
+    color: '#64748b'
+  },
+  detailsDivider: {
+    margin: '8px 0',
+    borderTop: '1px solid #cbd5e1'
   },
   tripDetailsPanel: {
     borderTop: '1px solid #ccfbf1',

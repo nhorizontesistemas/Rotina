@@ -70,6 +70,8 @@ class TravelPlan(models.Model):
     ]
 
     destination_name = models.CharField(max_length=200)
+    departure_date = models.DateField(null=True, blank=True)
+    return_date = models.DateField(null=True, blank=True)
     total_distance = models.DecimalField(max_digits=10, decimal_places=2, default=0)
     transport_type = models.CharField(max_length=20, choices=TRANSPORT_CHOICES, default='CAR')
     toll_total = models.DecimalField(max_digits=10, decimal_places=2, default=0)
@@ -125,8 +127,11 @@ class TravelItineraryItem(models.Model):
     ]
 
     travel_plan = models.ForeignKey(TravelPlan, on_delete=models.CASCADE, related_name='itinerary_items')
+    event_date = models.DateField(null=True, blank=True)
+    event_time = models.TimeField(null=True, blank=True)
     item_type = models.CharField(max_length=30, choices=ITEM_TYPE_CHOICES)
     description = models.CharField(max_length=200)
+    is_completed = models.BooleanField(default=False)
     value = models.DecimalField(max_digits=10, decimal_places=2, default=0)
     expected_value = models.DecimalField(max_digits=10, decimal_places=2, default=0)
     real_value = models.DecimalField(max_digits=10, decimal_places=2, default=0)
@@ -143,8 +148,11 @@ class TravelItineraryItem(models.Model):
 
 class TravelAccommodationItem(models.Model):
     travel_plan = models.ForeignKey(TravelPlan, on_delete=models.CASCADE, related_name='accommodation_items')
+    event_date = models.DateField(null=True, blank=True)
+    event_time = models.TimeField(null=True, blank=True)
     accommodation_type = models.CharField(max_length=100)
     accommodation_name = models.CharField(max_length=200)
+    is_completed = models.BooleanField(default=False)
     accommodation_total = models.DecimalField(max_digits=10, decimal_places=2, default=0)
     expected_value = models.DecimalField(max_digits=10, decimal_places=2, default=0)
     real_value = models.DecimalField(max_digits=10, decimal_places=2, default=0)
