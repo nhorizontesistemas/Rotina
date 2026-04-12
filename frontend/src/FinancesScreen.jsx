@@ -8,6 +8,12 @@ const STICKER_OPTIONS = [
   '🔥', '✨', '⭐', '🧠', '⚡', '📅', '📝', '🔧'
 ];
 
+function normalizeListResponse(data) {
+  if (Array.isArray(data)) return data;
+  if (Array.isArray(data?.results)) return data.results;
+  return [];
+}
+
 function sortTransactions(list) {
   return [...list].sort((a, b) => {
     const dateA = new Date(`${a.date}T12:00:00`).getTime();
@@ -65,14 +71,14 @@ export default function FinancesScreen({ API_URL, dateKey, onPrevMonth, onNextMo
   const fetchTransactions = () => {
     fetch(`${API_URL}/transactions/by_month/?date=${dateKey}`)
       .then(res => res.json())
-      .then(data => setTransactions(data))
+      .then(data => setTransactions(normalizeListResponse(data)))
       .catch(err => console.error(err));
   };
 
   const fetchCatalog = () => {
     fetch(`${API_URL}/transactions/`)
       .then(res => res.json())
-      .then(data => setFinanceCatalog(buildFinanceCatalog(data)))
+      .then(data => setFinanceCatalog(buildFinanceCatalog(normalizeListResponse(data))))
       .catch(err => console.error(err));
   };
 
@@ -259,9 +265,10 @@ export default function FinancesScreen({ API_URL, dateKey, onPrevMonth, onNextMo
     fetchCatalog();
   };
 
-  const earnings = transactions.filter(t => t.category === 'EARNING');
-  const fixedExpenses = transactions.filter(t => t.category === 'FIXED_EXPENSE');
-  const dailyExpenses = transactions.filter(t => t.category === 'DAILY_EXPENSE');
+  const safeTransactions = Array.isArray(transactions) ? transactions : [];
+  const earnings = safeTransactions.filter(t => t.category === 'EARNING');
+  const fixedExpenses = safeTransactions.filter(t => t.category === 'FIXED_EXPENSE');
+  const dailyExpenses = safeTransactions.filter(t => t.category === 'DAILY_EXPENSE');
 
   const totalEarnings = earnings.filter(t => t.is_completed).reduce((sum, t) => sum + parseFloat(t.amount), 0);
   const totalFixedExpenses = fixedExpenses.filter(t => t.is_completed).reduce((sum, t) => sum + parseFloat(t.amount), 0);

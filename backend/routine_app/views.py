@@ -1,6 +1,6 @@
 from rest_framework import viewsets
-from .models import Hydration, Routine, RoutineLog, Transaction, MonthlyFinanceState
-from .serializers import HydrationSerializer, RoutineSerializer, RoutineLogSerializer, TransactionSerializer
+from .models import Hydration, Routine, RoutineLog, Transaction, MonthlyFinanceState, TravelPlan, TravelComboItem, TravelItineraryItem, TravelAccommodationItem
+from .serializers import HydrationSerializer, RoutineSerializer, RoutineLogSerializer, TransactionSerializer, TravelPlanSerializer, TravelComboItemSerializer, TravelItineraryItemSerializer, TravelAccommodationItemSerializer
 from rest_framework.decorators import action
 from rest_framework.response import Response
 from datetime import date, timedelta
@@ -98,11 +98,31 @@ class TransactionViewSet(viewsets.ModelViewSet):
             target_date = date.today()
 
         self._replicate_fixed_expenses_for_month(target_date)
-            
+
         transactions = Transaction.objects.filter(
             date__year=target_date.year,
             date__month=target_date.month
         ).order_by('-date', '-id')
-        
+
         serializer = self.get_serializer(transactions, many=True)
         return Response(serializer.data)
+
+
+class TravelPlanViewSet(viewsets.ModelViewSet):
+    queryset = TravelPlan.objects.prefetch_related('combo_items', 'itinerary_items', 'accommodation_items').all()
+    serializer_class = TravelPlanSerializer
+
+
+class TravelComboItemViewSet(viewsets.ModelViewSet):
+    queryset = TravelComboItem.objects.select_related('travel_plan').all()
+    serializer_class = TravelComboItemSerializer
+
+
+class TravelItineraryItemViewSet(viewsets.ModelViewSet):
+    queryset = TravelItineraryItem.objects.select_related('travel_plan').all()
+    serializer_class = TravelItineraryItemSerializer
+
+
+class TravelAccommodationItemViewSet(viewsets.ModelViewSet):
+    queryset = TravelAccommodationItem.objects.select_related('travel_plan').all()
+    serializer_class = TravelAccommodationItemSerializer

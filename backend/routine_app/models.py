@@ -58,3 +58,102 @@ class MonthlyFinanceState(models.Model):
 
     def __str__(self):
         return f"{self.month:02d}/{self.year}"
+
+
+class TravelPlan(models.Model):
+    TRANSPORT_CHOICES = [
+        ('CAR', 'Carro'),
+        ('BUS', 'Onibus'),
+        ('PLANE', 'Aviao'),
+        ('VAN', 'Van'),
+        ('OTHER', 'Outro'),
+    ]
+
+    destination_name = models.CharField(max_length=200)
+    total_distance = models.DecimalField(max_digits=10, decimal_places=2, default=0)
+    transport_type = models.CharField(max_length=20, choices=TRANSPORT_CHOICES, default='CAR')
+    toll_total = models.DecimalField(max_digits=10, decimal_places=2, default=0)
+    fuel_estimate = models.DecimalField(max_digits=10, decimal_places=2, default=0)
+    accommodation_type = models.CharField(max_length=100, blank=True, null=True)
+    accommodation_name = models.CharField(max_length=200, blank=True, null=True)
+    accommodation_total = models.DecimalField(max_digits=10, decimal_places=2, default=0)
+    created_at = models.DateTimeField(auto_now_add=True)
+    updated_at = models.DateTimeField(auto_now=True)
+
+    class Meta:
+        ordering = ['-updated_at', '-id']
+
+    def __str__(self):
+        return self.destination_name
+
+
+class TravelComboItem(models.Model):
+    ITEM_TYPE_CHOICES = [
+        ('TOUR', 'Passeio'),
+        ('SHOP', 'Loja'),
+        ('BREAKFAST', 'Cafe da manha'),
+        ('AFTERNOON_COFFEE', 'Cafe da tarde'),
+        ('LUNCH', 'Almoco'),
+        ('DINNER', 'Jantar'),
+        ('DESSERT', 'Sobremesa'),
+    ]
+
+    travel_plan = models.ForeignKey(TravelPlan, on_delete=models.CASCADE, related_name='combo_items')
+    item_type = models.CharField(max_length=30, choices=ITEM_TYPE_CHOICES)
+    place_name = models.CharField(max_length=200)
+    expected_value = models.DecimalField(max_digits=10, decimal_places=2, default=0)
+    real_value = models.DecimalField(max_digits=10, decimal_places=2, default=0)
+    created_at = models.DateTimeField(auto_now_add=True)
+    updated_at = models.DateTimeField(auto_now=True)
+
+    class Meta:
+        ordering = ['-id']
+
+    def __str__(self):
+        return f"{self.place_name} - {self.item_type}"
+
+
+class TravelItineraryItem(models.Model):
+    ITEM_TYPE_CHOICES = [
+        ('BREAKFAST', 'Cafe da manha'),
+        ('AFTERNOON', 'Cafe da tarde'),
+        ('TOUR', 'Passeio'),
+        ('LUNCH', 'Almoco'),
+        ('DINNER', 'Jantar'),
+        ('DESSERT', 'Sobremesa'),
+        ('OTHER', 'Outros'),
+    ]
+
+    travel_plan = models.ForeignKey(TravelPlan, on_delete=models.CASCADE, related_name='itinerary_items')
+    item_type = models.CharField(max_length=30, choices=ITEM_TYPE_CHOICES)
+    description = models.CharField(max_length=200)
+    value = models.DecimalField(max_digits=10, decimal_places=2, default=0)
+    expected_value = models.DecimalField(max_digits=10, decimal_places=2, default=0)
+    real_value = models.DecimalField(max_digits=10, decimal_places=2, default=0)
+    notes = models.TextField(null=True, blank=True)
+    created_at = models.DateTimeField(auto_now_add=True)
+    updated_at = models.DateTimeField(auto_now=True)
+
+    class Meta:
+        ordering = ['-id']
+
+    def __str__(self):
+        return f"{self.description} - {self.item_type}"
+
+
+class TravelAccommodationItem(models.Model):
+    travel_plan = models.ForeignKey(TravelPlan, on_delete=models.CASCADE, related_name='accommodation_items')
+    accommodation_type = models.CharField(max_length=100)
+    accommodation_name = models.CharField(max_length=200)
+    accommodation_total = models.DecimalField(max_digits=10, decimal_places=2, default=0)
+    expected_value = models.DecimalField(max_digits=10, decimal_places=2, default=0)
+    real_value = models.DecimalField(max_digits=10, decimal_places=2, default=0)
+    notes = models.TextField(null=True, blank=True)
+    created_at = models.DateTimeField(auto_now_add=True)
+    updated_at = models.DateTimeField(auto_now=True)
+
+    class Meta:
+        ordering = ['-id']
+
+    def __str__(self):
+        return f"{self.accommodation_name} - {self.accommodation_type}"

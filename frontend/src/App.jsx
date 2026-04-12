@@ -5,8 +5,9 @@ import DateSelector from './DateSelector'
 import RoutineChecklist from './RoutineChecklist'
 import ProgressCard from './ProgressCard'
 import AddRoutineModal from './AddRoutineModal'
-import { Plus, ListTodo, Wallet } from 'lucide-react'
+import { Plus, ListTodo, Wallet, Plane } from 'lucide-react'
 import FinancesScreen from './FinancesScreen'
+import TravelScreen from './TravelScreen'
 
 const API_URL = window.location.hostname === 'localhost' 
   ? `http://${window.location.hostname}:8000/api`
@@ -393,8 +394,17 @@ function App() {
   const [activeTab, setActiveTab] = useState('routines');
 
   return (
-    <div className={`app-container ${activeTab === 'routines' ? 'theme-blue' : ''}`} style={activeTab === 'routines' ? { background: 'linear-gradient(180deg, #eff6ff 0%, #f8fafc 100%)', minHeight: '100vh' } : {}}>
-      {activeTab === 'routines' ? (
+    <div
+      className={`app-container ${activeTab === 'routines' ? 'theme-blue' : ''}`}
+      style={
+        activeTab === 'routines'
+          ? { background: 'linear-gradient(180deg, #eff6ff 0%, #f8fafc 100%)', minHeight: '100vh' }
+          : activeTab === 'travel'
+            ? { background: 'linear-gradient(180deg, #fff7ed 0%, #f8fafc 100%)', minHeight: '100vh' }
+            : {}
+      }
+    >
+      <div style={{ display: activeTab === 'routines' ? 'block' : 'none' }}>
         <div style={{ display: 'flex', flexDirection: 'column', gap: '24px' }}>
           <HydrationCard 
             consumed={hydration.consumed} 
@@ -426,14 +436,20 @@ function App() {
             <ProgressCard total={totalCount} completed={completedCount} />
           </div>
         </div>
-      ) : (
+      </div>
+
+      <div style={{ display: activeTab === 'finances' ? 'block' : 'none' }}>
         <FinancesScreen 
           API_URL={API_URL} 
           dateKey={dateKey} 
           onPrevMonth={handlePrevMonth} 
           onNextMonth={handleNextMonth} 
         />
-      )}
+      </div>
+
+      <div style={{ display: activeTab === 'travel' ? 'block' : 'none' }}>
+        <TravelScreen API_URL={API_URL} />
+      </div>
 
       {/* BOTTOM NAV */}
       <nav className="bottom-nav">
@@ -454,6 +470,15 @@ function App() {
             <Wallet size={24} />
           </div>
           <span>Finanças</span>
+        </button>
+        <button 
+          className={`nav-item ${activeTab === 'travel' ? 'active' : ''}`}
+          onClick={() => setActiveTab('travel')}
+        >
+          <div className="nav-icon-container">
+            <Plane size={24} />
+          </div>
+          <span>Viagem</span>
         </button>
       </nav>
 

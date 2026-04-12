@@ -1,5 +1,5 @@
 from rest_framework import serializers
-from .models import Hydration, Routine, RoutineLog, Transaction
+from .models import Hydration, Routine, RoutineLog, Transaction, TravelPlan, TravelComboItem, TravelItineraryItem, TravelAccommodationItem
 
 class HydrationSerializer(serializers.ModelSerializer):
     class Meta:
@@ -24,4 +24,32 @@ class RoutineLogSerializer(serializers.ModelSerializer):
 class TransactionSerializer(serializers.ModelSerializer):
     class Meta:
         model = Transaction
+        fields = '__all__'
+
+
+class TravelComboItemSerializer(serializers.ModelSerializer):
+    class Meta:
+        model = TravelComboItem
+        fields = '__all__'
+
+
+class TravelItineraryItemSerializer(serializers.ModelSerializer):
+    class Meta:
+        model = TravelItineraryItem
+        fields = '__all__'
+
+
+class TravelAccommodationItemSerializer(serializers.ModelSerializer):
+    class Meta:
+        model = TravelAccommodationItem
+        fields = '__all__'
+
+
+class TravelPlanSerializer(serializers.ModelSerializer):
+    combo_items = TravelComboItemSerializer(many=True, read_only=True)
+    itinerary_items = TravelItineraryItemSerializer(many=True, read_only=True)
+    accommodation_items = TravelAccommodationItemSerializer(many=True, read_only=True)
+
+    class Meta:
+        model = TravelPlan
         fields = '__all__'
