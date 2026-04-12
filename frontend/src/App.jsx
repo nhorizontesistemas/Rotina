@@ -40,6 +40,19 @@ function sortRoutines(routines) {
   });
 }
 
+const HASH_BY_TAB = {
+  routines: '#/rotinas',
+  finances: '#/financas',
+  travel: '#/viagem'
+};
+
+function getTabFromHash(hash) {
+  const cleanHash = (hash || '').toLowerCase();
+  if (cleanHash === '#/financas') return 'finances';
+  if (cleanHash === '#/viagem') return 'travel';
+  return 'routines';
+}
+
 function App() {
   const [currentDate, setCurrentDate] = useState(new Date());
   const [isModalOpen, setIsModalOpen] = useState(false);
@@ -391,7 +404,34 @@ function App() {
   const completedCount = dailyRoutines.filter(r => r.completed).length;
   const totalCount = dailyRoutines.length;
 
-  const [activeTab, setActiveTab] = useState('routines');
+  const [activeTab, setActiveTab] = useState(() => getTabFromHash(window.location.hash));
+
+  useEffect(() => {
+    const syncTabWithHash = () => {
+      setActiveTab(getTabFromHash(window.location.hash));
+    };
+
+    window.addEventListener('hashchange', syncTabWithHash);
+
+    const currentHash = (window.location.hash || '').toLowerCase();
+    const normalizedHash = HASH_BY_TAB[getTabFromHash(currentHash)];
+    if (currentHash !== normalizedHash) {
+      window.history.replaceState(null, '', normalizedHash);
+    }
+
+    return () => {
+      window.removeEventListener('hashchange', syncTabWithHash);
+    };
+  }, []);
+
+  const handleTabChange = (tab) => {
+    const targetHash = HASH_BY_TAB[tab] || HASH_BY_TAB.routines;
+    if (window.location.hash !== targetHash) {
+      window.location.hash = targetHash;
+      return;
+    }
+    setActiveTab(tab);
+  };
 
   return (
     <div
@@ -455,7 +495,7 @@ function App() {
       <nav className="bottom-nav">
         <button 
           className={`nav-item ${activeTab === 'routines' ? 'active' : ''}`}
-          onClick={() => setActiveTab('routines')}
+          onClick={() => handleTabChange('routines')}
         >
           <div className="nav-icon-container">
             <ListTodo size={24} />
@@ -464,7 +504,7 @@ function App() {
         </button>
         <button 
           className={`nav-item ${activeTab === 'finances' ? 'active' : ''}`}
-          onClick={() => setActiveTab('finances')}
+          onClick={() => handleTabChange('finances')}
         >
           <div className="nav-icon-container">
             <Wallet size={24} />
@@ -473,7 +513,7 @@ function App() {
         </button>
         <button 
           className={`nav-item ${activeTab === 'travel' ? 'active' : ''}`}
-          onClick={() => setActiveTab('travel')}
+          onClick={() => handleTabChange('travel')}
         >
           <div className="nav-icon-container">
             <Plane size={24} />

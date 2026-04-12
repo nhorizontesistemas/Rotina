@@ -213,15 +213,10 @@ function filterMunicipios(query) {
   return results;
 }
 
-function estimateTollByDistance(distanceKm) {
-  if (!distanceKm || distanceKm <= 0) return '0.00';
-  const tollPerKm = 0.09; // quick BR-road estimate: R$9 per 100km
-  return (distanceKm * tollPerKm).toFixed(2);
-}
-
 export default function TravelScreen({ API_URL }) {
   const [trips, setTrips] = useState([]);
   const [activeTripId, setActiveTripId] = useState(null);
+  const [expandedTripId, setExpandedTripId] = useState(null);
   const [tripDraft, setTripDraft] = useState(buildTripDraft());
   const [editingTripId, setEditingTripId] = useState(null);
   const [itineraryDraft, setItineraryDraft] = useState(buildItineraryDraft());
@@ -256,6 +251,7 @@ export default function TravelScreen({ API_URL }) {
         }
         if (data.length === 0) {
           setActiveTripId(null);
+          setExpandedTripId(null);
         }
       })
       .catch((error) => console.error('Erro ao carregar viagens:', error));
@@ -317,7 +313,6 @@ export default function TravelScreen({ API_URL }) {
 
   const activeTrip = trips.find((trip) => trip.id === activeTripId) || null;
   const summary = activeTrip ? getTripSummary(activeTrip) : null;
-  const itineraryGroups = activeTrip ? groupItineraryByType(activeTrip.itinerary_items || []) : [];
 
   const handleCalculateRoute = async () => {
     if (!routeOrigin.trim() || !routeDestination.trim()) return;
@@ -369,12 +364,10 @@ export default function TravelScreen({ API_URL }) {
       const distanceKm = Math.round(osrmData.routes[0].distance / 1000);
       const fuelLiters = distanceKm / Number(kmPerLiter || 10);
       const fuelCost = (fuelLiters * Number(fuelPricePerLiter || 6.5)).toFixed(2);
-      const tollEstimate = estimateTollByDistance(distanceKm);
 
       setTripDraft((prev) => ({
         ...prev,
         total_distance: distanceKm,
-        toll_total: tollEstimate,
         fuel_estimate: fuelCost,
         destination_name: prev.destination_name || routeDestination
       }));
@@ -390,6 +383,14 @@ export default function TravelScreen({ API_URL }) {
 
   const handleOpenMaps = () => {
     if (!mapsLink) return;
+    const isAndroid = /Android/i.test(navigator.userAgent || '');
+
+    if (isAndroid) {
+      const intentUrl = `intent://maps.google.com/maps/dir/?api=1&origin=${encodeURIComponent(routeOrigin)}&destination=${encodeURIComponent(routeDestination)}#Intent;scheme=https;package=com.google.android.apps.maps;S.browser_fallback_url=${encodeURIComponent(mapsLink)};end`;
+      window.location.href = intentUrl;
+      return;
+    }
+
     const popup = window.open(mapsLink, '_blank', 'noopener,noreferrer');
     if (!popup) {
       window.location.href = mapsLink;
@@ -545,17 +546,18 @@ export default function TravelScreen({ API_URL }) {
     setTripFormModal({ open: false, type: null });
   };
 
-  const handleEditItinerary = (item) => {
+  const handleEditItinerary = (item, tripId = activeTrip?.id) => {
+    if (tripId) setActiveTripId(tripId);
     setEditingItineraryId(item.id);
     setItineraryDraft(buildItineraryDraft(item));
     setTripFormModal({ open: true, type: 'itinerary' });
   };
 
-  const handleDeleteItinerary = async (itemId) => {
-    if (!activeTrip) return;
+  const handleDeleteItinerary = async (itemId, tripId = activeTrip?.id) => {
+    if (!tripId) return;
     const previousTrips = trips;
     setTrips((prev) => prev.map((trip) => (
-      trip.id === activeTrip.id
+      trip.id === tripId
         ? { ...trip, itinerary_items: (trip.itinerary_items || []).filter((i) => i.id !== itemId) }
         : trip
     )));
@@ -613,17 +615,18 @@ export default function TravelScreen({ API_URL }) {
     setTripFormModal({ open: false, type: null });
   };
 
-  const handleEditAccommodation = (item) => {
+  const handleEditAccommodation = (item, tripId = activeTrip?.id) => {
+    if (tripId) setActiveTripId(tripId);
     setEditingAccommodationId(item.id);
     setAccommodationDraft(buildAccommodationDraft(item));
     setTripFormModal({ open: true, type: 'accommodation' });
   };
 
-  const handleDeleteAccommodation = async (itemId) => {
-    if (!activeTrip) return;
+  const handleDeleteAccommodation = async (itemId, tripId = activeTrip?.id) => {
+    if (!tripId) return;
     const previousTrips = trips;
     setTrips((prev) => prev.map((trip) => (
-      trip.id === activeTrip.id
+      trip.id === tripId
         ? { ...trip, accommodation_items: (trip.accommodation_items || []).filter((i) => i.id !== itemId) }
         : trip
     )));
@@ -867,34 +870,126 @@ export default function TravelScreen({ API_URL }) {
             {trips.map((trip) => {
               const tripSummary = getTripSummary(trip);
               const isActive = trip.id === activeTripId;
+              const isExpanded = trip.id === expandedTripId;
+              const tripItineraryGroups = groupItineraryByType(trip.itinerary_items || []);
               return (
                 <div key={trip.id} style={{ ...styles.tripCard, ...(isActive ? styles.tripCardActive : {}) }}>
-                  <div style={styles.tripCardMain}>
-                    <button onClick={() => setActiveTripId(trip.id)} style={styles.tripSelectArea}>
-                      <div>
-                        <strong style={styles.tripName}>{trip.destination_name}</strong>
-                        <span style={styles.tripMeta}>{transportLabels[trip.transport_type] || trip.transport_type} • {Number(trip.total_distance || 0).toFixed(0)} km</span>
-                        <span style={styles.tripMeta}>{(trip.itinerary_items || []).length} roteiros • {(trip.accommodation_items || []).length} acomodacoes</span>
-                        <span style={styles.tripMeta}>Total previsto: R$ {toMoney(tripSummary.expectedTotal)} • Real: R$ {toMoney(tripSummary.realTotal)}</span>
-                      </div>
-                    </button>
-                    <div style={styles.cardActionRow}>
-                      <button type="button" onClick={() => openTripFormModal('itinerary', trip.id)} style={styles.smallActionButton}>
-                        + Roteiro
+                  <div style={styles.tripCardTopRow}>
+                    <div style={styles.tripCardMain}>
+                      <button
+                        onClick={() => {
+                          setActiveTripId(trip.id);
+                          setExpandedTripId((prev) => (prev === trip.id ? null : trip.id));
+                        }}
+                        style={styles.tripSelectArea}
+                      >
+                        <div>
+                          <strong style={styles.tripName}>{trip.destination_name}</strong>
+                          <span style={styles.tripMeta}>{transportLabels[trip.transport_type] || trip.transport_type} • {Number(trip.total_distance || 0).toFixed(0)} km</span>
+                          <span style={styles.tripMeta}>{(trip.itinerary_items || []).length} roteiros • {(trip.accommodation_items || []).length} acomodacoes</span>
+                          <span style={styles.tripMeta}>Total previsto: R$ {toMoney(tripSummary.expectedTotal)} • Real: R$ {toMoney(tripSummary.realTotal)}</span>
+                          <span style={styles.expandHint}>{isExpanded ? 'Toque para ocultar detalhes' : 'Toque para ver roteiros e acomodacoes'}</span>
+                        </div>
                       </button>
-                      <button type="button" onClick={() => openTripFormModal('accommodation', trip.id)} style={styles.smallActionButton}>
-                        + Acomodacao
+                      <div style={styles.cardActionRow}>
+                        <button type="button" onClick={() => openTripFormModal('itinerary', trip.id)} style={styles.smallActionButton}>
+                          + Roteiro
+                        </button>
+                        <button type="button" onClick={() => openTripFormModal('accommodation', trip.id)} style={styles.smallActionButton}>
+                          + Acomodacao
+                        </button>
+                      </div>
+                    </div>
+                    <div style={styles.inlineActions}>
+                      <button onClick={() => handleEditTrip(trip)} style={styles.iconButton} title="Editar viagem">
+                        <Edit2 size={16} />
+                      </button>
+                      <button onClick={() => handleDeleteTrip(trip.id)} style={styles.iconButton} title="Excluir viagem">
+                        <Trash2 size={16} />
                       </button>
                     </div>
                   </div>
-                  <div style={styles.inlineActions}>
-                    <button onClick={() => handleEditTrip(trip)} style={styles.iconButton} title="Editar viagem">
-                      <Edit2 size={16} />
-                    </button>
-                    <button onClick={() => handleDeleteTrip(trip.id)} style={styles.iconButton} title="Excluir viagem">
-                      <Trash2 size={16} />
-                    </button>
-                  </div>
+
+                  {isExpanded && (
+                    <div style={styles.tripDetailsPanel}>
+                      <div style={styles.tripDetailsBlock}>
+                        <div style={styles.sectionHeader}>
+                          <h4 style={styles.tripDetailsTitle}>Roteiro</h4>
+                          <span style={styles.smallText}>{(trip.itinerary_items || []).length} itens</span>
+                        </div>
+                        {(trip.itinerary_items || []).length === 0 ? (
+                          <p style={styles.emptyState}>Nenhum roteiro adicionado para esta viagem.</p>
+                        ) : (
+                          <div style={styles.listColumn}>
+                            {tripItineraryGroups.map((group) => (
+                              <div key={`${trip.id}-${group.type}`} style={styles.comboGroupCard}>
+                                <div style={styles.comboGroupHeader}>
+                                  <strong style={styles.comboGroupTitle}><span style={{ marginRight: '6px' }}>{itineraryTypeIcons[group.type]}</span>{itineraryTypeLabels[group.type]}</strong>
+                                  <span style={styles.smallText}>{group.items.length} itens</span>
+                                </div>
+                                <div style={styles.listColumn}>
+                                  {group.items.map((item) => (
+                                    <div key={item.id} style={styles.comboCard}>
+                                      <div style={{ flex: 1 }}>
+                                        <strong style={styles.tripName}>{item.description}</strong>
+                                        <div style={styles.comboValuesRow}>
+                                          <span style={styles.expectedPill}>Estimado: R$ {toMoney(item.expected_value || item.value)}</span>
+                                          <span style={styles.realPill}>Real: R$ {toMoney(item.real_value || item.value)}</span>
+                                        </div>
+                                        {item.notes && <span style={styles.tripMeta}>{item.notes}</span>}
+                                      </div>
+                                      <div style={styles.inlineActions}>
+                                        <button onClick={() => handleEditItinerary(item, trip.id)} style={styles.iconButton} title="Editar roteiro">
+                                          <Edit2 size={16} />
+                                        </button>
+                                        <button onClick={() => handleDeleteItinerary(item.id, trip.id)} style={styles.iconButton} title="Excluir roteiro">
+                                          <Trash2 size={16} />
+                                        </button>
+                                      </div>
+                                    </div>
+                                  ))}
+                                </div>
+                              </div>
+                            ))}
+                          </div>
+                        )}
+                      </div>
+
+                      <div style={styles.tripDetailsBlock}>
+                        <div style={styles.sectionHeader}>
+                          <h4 style={styles.tripDetailsTitle}>Acomodacoes</h4>
+                          <span style={styles.smallText}>{(trip.accommodation_items || []).length} itens</span>
+                        </div>
+                        {(trip.accommodation_items || []).length === 0 ? (
+                          <p style={styles.emptyState}>Nenhuma acomodacao adicionada para esta viagem.</p>
+                        ) : (
+                          <div style={styles.listColumn}>
+                            {(trip.accommodation_items || []).map((item) => (
+                              <div key={item.id} style={styles.comboCard}>
+                                <div style={{ flex: 1 }}>
+                                  <strong style={styles.tripName}>{item.accommodation_name}</strong>
+                                  <span style={styles.tripMeta}>{item.accommodation_type}</span>
+                                  {item.notes && <span style={styles.tripMeta}>{item.notes}</span>}
+                                  <div style={styles.comboValuesRow}>
+                                    <span style={styles.expectedPill}>Estimado: R$ {toMoney(item.expected_value || item.accommodation_total)}</span>
+                                    <span style={styles.realPill}>Real: R$ {toMoney(item.real_value || item.accommodation_total)}</span>
+                                  </div>
+                                </div>
+                                <div style={styles.inlineActions}>
+                                  <button onClick={() => handleEditAccommodation(item, trip.id)} style={styles.iconButton} title="Editar acomodacao">
+                                    <Edit2 size={16} />
+                                  </button>
+                                  <button onClick={() => handleDeleteAccommodation(item.id, trip.id)} style={styles.iconButton} title="Excluir acomodacao">
+                                    <Trash2 size={16} />
+                                  </button>
+                                </div>
+                              </div>
+                            ))}
+                          </div>
+                        )}
+                      </div>
+                    </div>
+                  )}
                 </div>
               );
             })}
@@ -903,113 +998,34 @@ export default function TravelScreen({ API_URL }) {
       </div>
 
       {activeTrip && summary && (
-        <>
-          <div className="card" style={{ padding: '20px' }}>
-            <div style={styles.sectionHeader}>
-              <h3 style={styles.sectionTitle}>Roteiro completo</h3>
-              <span style={styles.smallText}>{(activeTrip.itinerary_items || []).length} itens</span>
-            </div>
-            {(activeTrip.itinerary_items || []).length === 0 ? (
-              <p style={styles.emptyState}>Nenhum roteiro adicionado para esta viagem.</p>
-            ) : (
-              <div style={styles.listColumn}>
-                {itineraryGroups.map((group) => (
-                  <div key={group.type} style={styles.comboGroupCard}>
-                    <div style={styles.comboGroupHeader}>
-                      <strong style={styles.comboGroupTitle}><span style={{ marginRight: '6px' }}>{itineraryTypeIcons[group.type]}</span>{itineraryTypeLabels[group.type]}</strong>
-                      <span style={styles.smallText}>{group.items.length} itens</span>
-                    </div>
-                    <div style={styles.listColumn}>
-                      {group.items.map((item) => (
-                        <div key={item.id} style={styles.comboCard}>
-                          <div style={{ flex: 1 }}>
-                            <strong style={styles.tripName}>{item.description}</strong>
-                            <div style={styles.comboValuesRow}>
-                              <span style={styles.expectedPill}>Estimado: R$ {toMoney(item.expected_value || item.value)}</span>
-                              <span style={styles.realPill}>Real: R$ {toMoney(item.real_value || item.value)}</span>
-                            </div>
-                            {item.notes && <span style={styles.tripMeta}>{item.notes}</span>}
-                          </div>
-                          <div style={styles.inlineActions}>
-                            <button onClick={() => handleEditItinerary(item)} style={styles.iconButton} title="Editar roteiro">
-                              <Edit2 size={16} />
-                            </button>
-                            <button onClick={() => handleDeleteItinerary(item.id)} style={styles.iconButton} title="Excluir roteiro">
-                              <Trash2 size={16} />
-                            </button>
-                          </div>
-                        </div>
-                      ))}
-                    </div>
-                  </div>
-                ))}
-              </div>
-            )}
+        <div className="card" style={{ padding: '20px' }}>
+          <div style={styles.sectionHeader}>
+            <h3 style={styles.sectionTitle}>Resumo financeiro</h3>
+            <span style={styles.smallText}>{activeTrip.destination_name}</span>
           </div>
-
-          <div className="card" style={{ padding: '20px' }}>
-            <div style={styles.sectionHeader}>
-              <h3 style={styles.sectionTitle}>Lista de acomodacoes</h3>
-              <span style={styles.smallText}>{(activeTrip.accommodation_items || []).length} itens</span>
-            </div>
-            {(activeTrip.accommodation_items || []).length === 0 ? (
-              <p style={styles.emptyState}>Nenhuma acomodacao adicionada para esta viagem.</p>
-            ) : (
-              <div style={styles.listColumn}>
-                {(activeTrip.accommodation_items || []).map((item) => (
-                  <div key={item.id} style={styles.comboCard}>
-                    <div style={{ flex: 1 }}>
-                      <strong style={styles.tripName}>{item.accommodation_name}</strong>
-                      <span style={styles.tripMeta}>{item.accommodation_type}</span>
-                      {item.notes && <span style={styles.tripMeta}>{item.notes}</span>}
-                      <div style={styles.comboValuesRow}>
-                        <span style={styles.expectedPill}>Estimado: R$ {toMoney(item.expected_value || item.accommodation_total)}</span>
-                        <span style={styles.realPill}>Real: R$ {toMoney(item.real_value || item.accommodation_total)}</span>
-                      </div>
-                    </div>
-                    <div style={styles.inlineActions}>
-                      <button onClick={() => handleEditAccommodation(item)} style={styles.iconButton} title="Editar acomodacao">
-                        <Edit2 size={16} />
-                      </button>
-                      <button onClick={() => handleDeleteAccommodation(item.id)} style={styles.iconButton} title="Excluir acomodacao">
-                        <Trash2 size={16} />
-                      </button>
-                    </div>
-                  </div>
-                ))}
-              </div>
-            )}
+          <div style={styles.summaryGrid}>
+            <SummaryBox icon={<Route size={18} />} label="Distancia" value={`${Number(activeTrip.total_distance || 0).toFixed(0)} km`} />
+            <SummaryBox icon={<Ticket size={18} />} label="Pedagios" value={`R$ ${toMoney(activeTrip.toll_total)}`} />
+            <SummaryBox icon={<Fuel size={18} />} label="Combustivel" value={`R$ ${toMoney(activeTrip.fuel_estimate)}`} />
+            <SummaryBox icon={<BedDouble size={18} />} label="Diarias (real)" value={`R$ ${toMoney(summary.accommodationReal)}`} />
           </div>
-
-          <div className="card" style={{ padding: '20px' }}>
-            <div style={styles.sectionHeader}>
-              <h3 style={styles.sectionTitle}>Resumo financeiro</h3>
-              <span style={styles.smallText}>{activeTrip.destination_name}</span>
+          <div style={styles.comparisonGrid}>
+            <div style={styles.comparisonCard}>
+              <span style={styles.comparisonLabel}>Total esperado</span>
+              <strong style={styles.comparisonValue}>R$ {toMoney(summary.expectedTotal)}</strong>
             </div>
-            <div style={styles.summaryGrid}>
-              <SummaryBox icon={<Route size={18} />} label="Distancia" value={`${Number(activeTrip.total_distance || 0).toFixed(0)} km`} />
-              <SummaryBox icon={<Ticket size={18} />} label="Pedagios" value={`R$ ${toMoney(activeTrip.toll_total)}`} />
-              <SummaryBox icon={<Fuel size={18} />} label="Combustivel" value={`R$ ${toMoney(activeTrip.fuel_estimate)}`} />
-              <SummaryBox icon={<BedDouble size={18} />} label="Diarias (real)" value={`R$ ${toMoney(summary.accommodationReal)}`} />
+            <div style={styles.comparisonCard}>
+              <span style={styles.comparisonLabel}>Total real</span>
+              <strong style={styles.comparisonValue}>R$ {toMoney(summary.realTotal)}</strong>
             </div>
-            <div style={styles.comparisonGrid}>
-              <div style={styles.comparisonCard}>
-                <span style={styles.comparisonLabel}>Total esperado</span>
-                <strong style={styles.comparisonValue}>R$ {toMoney(summary.expectedTotal)}</strong>
-              </div>
-              <div style={styles.comparisonCard}>
-                <span style={styles.comparisonLabel}>Total real</span>
-                <strong style={styles.comparisonValue}>R$ {toMoney(summary.realTotal)}</strong>
-              </div>
-              <div style={styles.comparisonCard}>
-                <span style={styles.comparisonLabel}>Diferenca</span>
-                <strong style={{ ...styles.comparisonValue, color: summary.difference > 0 ? '#0369a1' : '#0f766e' }}>
-                  {summary.difference > 0 ? '+' : ''}R$ {toMoney(summary.difference)}
-                </strong>
-              </div>
+            <div style={styles.comparisonCard}>
+              <span style={styles.comparisonLabel}>Diferenca</span>
+              <strong style={{ ...styles.comparisonValue, color: summary.difference > 0 ? '#0369a1' : '#0f766e' }}>
+                {summary.difference > 0 ? '+' : ''}R$ {toMoney(summary.difference)}
+              </strong>
             </div>
           </div>
-        </>
+        </div>
       )}
 
       {tripFormModal.open && activeTrip && (
@@ -1394,12 +1410,18 @@ const styles = {
   },
   tripCard: {
     display: 'flex',
-    justifyContent: 'space-between',
+    flexDirection: 'column',
     gap: '12px',
     padding: '14px',
     borderRadius: '14px',
     border: '1px solid #a5f3fc',
     background: 'white',
+    alignItems: 'stretch'
+  },
+  tripCardTopRow: {
+    display: 'flex',
+    justifyContent: 'space-between',
+    gap: '12px',
     alignItems: 'flex-start'
   },
   tripCardMain: {
@@ -1430,6 +1452,13 @@ const styles = {
     marginTop: '4px',
     fontSize: '12px',
     color: 'var(--text-muted)'
+  },
+  expandHint: {
+    display: 'block',
+    marginTop: '8px',
+    fontSize: '12px',
+    color: '#0f766e',
+    fontWeight: '700'
   },
   cardActionRow: {
     display: 'flex',
@@ -1544,6 +1573,24 @@ const styles = {
     gap: '8px',
     marginTop: '6px',
     flexWrap: 'wrap'
+  },
+  tripDetailsPanel: {
+    borderTop: '1px solid #ccfbf1',
+    paddingTop: '12px',
+    display: 'flex',
+    flexDirection: 'column',
+    gap: '12px'
+  },
+  tripDetailsBlock: {
+    background: '#f8fafc',
+    borderRadius: '12px',
+    border: '1px solid #e2e8f0',
+    padding: '12px'
+  },
+  tripDetailsTitle: {
+    margin: 0,
+    color: 'var(--text-main)',
+    fontSize: '14px'
   },
   pickerOverlay: {
     position: 'fixed',
