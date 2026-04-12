@@ -235,6 +235,7 @@ export default function TravelScreen({ API_URL }) {
   const [destinationCoords, setDestinationCoords] = useState(null);
   const [fuelPricePerLiter, setFuelPricePerLiter] = useState('6.50');
   const [kmPerLiter, setKmPerLiter] = useState('15');
+  const [isRoundTrip, setIsRoundTrip] = useState(false);
   const [routeLoading, setRouteLoading] = useState(false);
   const [routeError, setRouteError] = useState('');
   const [mapsLink, setMapsLink] = useState('');
@@ -366,7 +367,10 @@ export default function TravelScreen({ API_URL }) {
 
       const distanceKm = Math.round(osrmData.routes[0].distance / 1000);
       const fuelLiters = distanceKm / Number(kmPerLiter || 10);
-      const fuelCost = (fuelLiters * Number(fuelPricePerLiter || 6.5)).toFixed(2);
+      let fuelCost = (fuelLiters * Number(fuelPricePerLiter || 6.5)).toFixed(2);
+      if (isRoundTrip) {
+        fuelCost = (Number(fuelCost) * 2).toFixed(2);
+      }
 
       setTripDraft((prev) => ({
         ...prev,
@@ -403,6 +407,7 @@ export default function TravelScreen({ API_URL }) {
   const resetTripForm = () => {
     setTripDraft(buildTripDraft());
     setEditingTripId(null);
+    setIsRoundTrip(false);
   };
 
   const resetItineraryForm = () => {
@@ -775,6 +780,18 @@ export default function TravelScreen({ API_URL }) {
                       style={styles.input}
                     />
                   </div>
+                </div>
+                <div style={{ display: 'flex', alignItems: 'center', gap: '8px', marginBottom: '10px' }}>
+                  <input
+                    type="checkbox"
+                    id="roundTripCheckbox"
+                    checked={isRoundTrip}
+                    onChange={(e) => setIsRoundTrip(e.target.checked)}
+                    style={{ cursor: 'pointer', width: '16px', height: '16px' }}
+                  />
+                  <label htmlFor="roundTripCheckbox" style={{ cursor: 'pointer', fontSize: '14px', color: 'var(--text-main)', fontWeight: '600' }}>
+                    Ida e volta? (dobra combustível)
+                  </label>
                 </div>
                 <div style={{ display: 'flex', gap: '10px', alignItems: 'center', flexWrap: 'wrap' }}>
                   <button
