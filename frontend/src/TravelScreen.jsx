@@ -224,6 +224,7 @@ export default function TravelScreen({ API_URL }) {
   const [accommodationDraft, setAccommodationDraft] = useState(buildAccommodationDraft());
   const [editingAccommodationId, setEditingAccommodationId] = useState(null);
   const [successMessage, setSuccessMessage] = useState('');
+  const [isLoadingTrips, setIsLoadingTrips] = useState(false);
   const [pickerState, setPickerState] = useState({ open: false, type: null });
   const [tripFormModal, setTripFormModal] = useState({ open: false, type: null });
   const [routeOrigin, setRouteOrigin] = useState('');
@@ -242,6 +243,7 @@ export default function TravelScreen({ API_URL }) {
   const destinationQueryRef = useRef('');
 
   const fetchTrips = () => {
+    setIsLoadingTrips(true);
     fetch(`${API_URL}/travel-plans/`)
       .then((res) => res.json())
       .then((data) => {
@@ -254,7 +256,8 @@ export default function TravelScreen({ API_URL }) {
           setExpandedTripId(null);
         }
       })
-      .catch((error) => console.error('Erro ao carregar viagens:', error));
+      .catch((error) => console.error('Erro ao carregar viagens:', error))
+      .finally(() => setIsLoadingTrips(false));
   };
 
   useEffect(() => {
@@ -756,6 +759,7 @@ export default function TravelScreen({ API_URL }) {
                       placeholder="6.50"
                       value={fuelPricePerLiter}
                       onChange={(e) => setFuelPricePerLiter(e.target.value)}
+                      onFocus={(e) => e.target.select()}
                       style={styles.input}
                     />
                   </div>
@@ -767,6 +771,7 @@ export default function TravelScreen({ API_URL }) {
                       placeholder="10"
                       value={kmPerLiter}
                       onChange={(e) => setKmPerLiter(e.target.value)}
+                      onFocus={(e) => e.target.select()}
                       style={styles.input}
                     />
                   </div>
@@ -811,6 +816,7 @@ export default function TravelScreen({ API_URL }) {
                 placeholder="0"
                 value={tripDraft.total_distance}
                 onChange={(e) => setTripDraft((prev) => ({ ...prev, total_distance: e.target.value }))}
+                onFocus={(e) => e.target.select()}
                 style={styles.input}
               />
             </div>
@@ -833,6 +839,7 @@ export default function TravelScreen({ API_URL }) {
                   placeholder="0,00"
                   value={tripDraft.toll_total}
                   onChange={(e) => setTripDraft((prev) => ({ ...prev, toll_total: e.target.value }))}
+                  onFocus={(e) => e.target.select()}
                   style={styles.moneyInput}
                 />
               </div>
@@ -846,6 +853,7 @@ export default function TravelScreen({ API_URL }) {
                   placeholder="0,00"
                   value={tripDraft.fuel_estimate}
                   onChange={(e) => setTripDraft((prev) => ({ ...prev, fuel_estimate: e.target.value }))}
+                  onFocus={(e) => e.target.select()}
                   style={styles.moneyInput}
                   disabled={tripDraft.transport_type !== 'CAR'}
                 />
@@ -863,15 +871,17 @@ export default function TravelScreen({ API_URL }) {
           <h3 style={styles.sectionTitle}>Minhas viagens</h3>
           <span style={styles.smallText}>{trips.length} viagens</span>
         </div>
-        {trips.length === 0 ? (
+        {isLoadingTrips ? (
+          <p style={{ ...styles.emptyState, background: '#f0fdfa', color: '#0f766e' }}>Carregando viagens...</p>
+        ) : trips.length === 0 ? (
           <p style={styles.emptyState}>Nenhuma viagem cadastrada ainda.</p>
         ) : (
           <div style={styles.listColumn}>
             {trips.map((trip) => {
-              const tripSummary = getTripSummary(trip);
               const isActive = trip.id === activeTripId;
               const isExpanded = trip.id === expandedTripId;
-              const tripItineraryGroups = groupItineraryByType(trip.itinerary_items || []);
+              const tripSummary = getTripSummary(trip);
+              const tripItineraryGroups = isExpanded ? groupItineraryByType(trip.itinerary_items || []) : [];
               return (
                 <div key={trip.id} style={{ ...styles.tripCard, ...(isActive ? styles.tripCardActive : {}) }}>
                   <div style={styles.tripCardTopRow}>
@@ -1072,6 +1082,7 @@ export default function TravelScreen({ API_URL }) {
                       placeholder="0,00"
                       value={itineraryDraft.expected_value}
                       onChange={(e) => setItineraryDraft((prev) => ({ ...prev, expected_value: e.target.value }))}
+                      onFocus={(e) => e.target.select()}
                       style={styles.moneyInput}
                     />
                   </div>
@@ -1085,6 +1096,7 @@ export default function TravelScreen({ API_URL }) {
                       placeholder="0,00"
                       value={itineraryDraft.real_value}
                       onChange={(e) => setItineraryDraft((prev) => ({ ...prev, real_value: e.target.value }))}
+                      onFocus={(e) => e.target.select()}
                       style={styles.moneyInput}
                     />
                   </div>
@@ -1134,6 +1146,7 @@ export default function TravelScreen({ API_URL }) {
                       placeholder="0,00"
                       value={accommodationDraft.expected_value}
                       onChange={(e) => setAccommodationDraft((prev) => ({ ...prev, expected_value: e.target.value }))}
+                      onFocus={(e) => e.target.select()}
                       style={styles.moneyInput}
                     />
                   </div>
@@ -1147,6 +1160,7 @@ export default function TravelScreen({ API_URL }) {
                       placeholder="0,00"
                       value={accommodationDraft.real_value}
                       onChange={(e) => setAccommodationDraft((prev) => ({ ...prev, real_value: e.target.value }))}
+                      onFocus={(e) => e.target.select()}
                       style={styles.moneyInput}
                     />
                   </div>
