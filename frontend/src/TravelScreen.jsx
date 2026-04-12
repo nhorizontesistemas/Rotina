@@ -21,7 +21,8 @@ const accommodationOptions = [
 const itineraryTypeLabels = {
   BREAKFAST: 'Cafe da manha',
   AFTERNOON: 'Cafe da tarde',
-  TOUR: 'Passeio',
+  TOUR: 'Ponto turistico',
+  SHOP: 'Lojas',
   LUNCH: 'Almoco',
   DINNER: 'Jantar',
   DESSERT: 'Sobremesa',
@@ -31,14 +32,15 @@ const itineraryTypeLabels = {
 const itineraryTypeIcons = {
   BREAKFAST: '🥐',
   AFTERNOON: '☀️',
-  TOUR: '🧭',
+  TOUR: '📍',
+  SHOP: '🛍️',
   LUNCH: '🍽️',
   DINNER: '🍷',
   DESSERT: '🍰',
   OTHER: '📝'
 };
 
-const itineraryTypeOrder = ['BREAKFAST', 'AFTERNOON', 'TOUR', 'LUNCH', 'DINNER', 'DESSERT', 'OTHER'];
+const itineraryTypeOrder = ['BREAKFAST', 'AFTERNOON', 'TOUR', 'SHOP', 'LUNCH', 'DINNER', 'DESSERT', 'OTHER'];
 
 
 function toMoney(value) {
@@ -73,8 +75,10 @@ function buildAccommodationDraft(item) {
   return {
     accommodation_type: item?.accommodation_type || 'Hotel',
     accommodation_name: item?.accommodation_name || '',
-    event_date: item?.event_date || '',
-    event_time: item?.event_time || '',
+    entry_date: item?.entry_date || item?.event_date || '',
+    exit_date: item?.exit_date || '',
+    checkin_time: item?.checkin_time || item?.event_time || '',
+    checkout_time: item?.checkout_time || '',
     expected_value: item?.expected_value || item?.accommodation_total || '0.00',
     real_value: item?.real_value || item?.accommodation_total || '0.00',
     notes: item?.notes || ''
@@ -126,6 +130,33 @@ function groupItemsByDate(items) {
     if (!grouped.has(key)) grouped.set(key, []);
     grouped.get(key).push(item);
   });
+  return Array.from(grouped.entries()).map(([date, rows]) => ({
+    date,
+    displayDate: date === 'Sem data' ? date : formatDateBr(date),
+    rows
+  }));
+}
+
+function groupAccommodationByEntryDate(items) {
+  const grouped = new Map();
+  const sorted = [...(items || [])].sort((a, b) => {
+    const aDate = a.entry_date || a.event_date || '9999-12-31';
+    const bDate = b.entry_date || b.event_date || '9999-12-31';
+    if (aDate !== bDate) return aDate.localeCompare(bDate);
+
+    const aTime = a.checkin_time || a.event_time || '23:59:59';
+    const bTime = b.checkin_time || b.event_time || '23:59:59';
+    if (aTime !== bTime) return aTime.localeCompare(bTime);
+
+    return (a.accommodation_name || '').localeCompare(b.accommodation_name || '', 'pt-BR');
+  });
+
+  sorted.forEach((item) => {
+    const key = item.entry_date || item.event_date || 'Sem data';
+    if (!grouped.has(key)) grouped.set(key, []);
+    grouped.get(key).push(item);
+  });
+
   return Array.from(grouped.entries()).map(([date, rows]) => ({
     date,
     displayDate: date === 'Sem data' ? date : formatDateBr(date),
@@ -667,8 +698,12 @@ export default function TravelScreen({ API_URL }) {
     const payload = {
       ...accommodationDraft,
       travel_plan: activeTrip.id,
-      event_date: accommodationDraft.event_date || null,
-      event_time: accommodationDraft.event_time || null,
+      entry_date: accommodationDraft.entry_date || null,
+      exit_date: accommodationDraft.exit_date || null,
+      checkin_time: accommodationDraft.checkin_time || null,
+      checkout_time: accommodationDraft.checkout_time || null,
+      event_date: accommodationDraft.entry_date || null,
+      event_time: accommodationDraft.checkin_time || null,
       expected_value: Number(accommodationDraft.expected_value || 0),
       real_value: Number(accommodationDraft.real_value || 0),
       accommodation_total: Number(accommodationDraft.real_value || 0),
@@ -1039,7 +1074,7 @@ export default function TravelScreen({ API_URL }) {
               const isExpanded = trip.id === expandedTripId;
               const tripSummary = getTripSummary(trip);
               const itineraryByDate = isExpanded ? groupItemsByDate(trip.itinerary_items || []) : [];
-              const accommodationByDate = isExpanded ? groupItemsByDate(trip.accommodation_items || []) : [];
+              const accommodationByDate = isExpanded ? groupAccommodationByEntryDate(trip.accommodation_items || []) : [];
               return (
                 <div key={trip.id} style={{ ...styles.tripCard, ...(isActive ? styles.tripCardActive : {}) }}>
                   <div style={styles.tripCardTopRow}>
@@ -1058,6 +1093,7 @@ export default function TravelScreen({ API_URL }) {
                             <span style={styles.tripMeta}>🗓️ {trip.departure_date ? formatDateBr(trip.departure_date) : '-'} até {trip.return_date ? formatDateBr(trip.return_date) : '-'}</span>
                           )}
                           <span style={styles.tripMeta}>{(trip.itinerary_items || []).length} roteiros • {(trip.accommodation_items || []).length} acomodacoes</span>
+                          <span style={styles.tripMeta}>Pedagios: R$ {toMoney(trip.toll_total)} • Combustivel: R$ {toMoney(trip.fuel_estimate)}</span>
                           <span style={styles.tripMeta}>Total previsto: R$ {toMoney(tripSummary.expectedTotal)} • Real: R$ {toMoney(tripSummary.realTotal)}</span>
                           <span style={styles.expandHint}>{isExpanded ? 'Toque para ocultar detalhes' : 'Toque para ver roteiros e acomodacoes'}</span>
                         </div>
@@ -1111,7 +1147,7 @@ export default function TravelScreen({ API_URL }) {
                                           {item.is_completed ? <CheckCircle2 size={18} color="#0f766e" /> : <Circle size={18} color="#64748b" />}
                                         </button>
                                         <div style={styles.itemMetaGroup}>
-                                          <span style={styles.timePill}>{item.event_time ? formatTime(item.event_time) : 'Sem hora'}</span>
+                                          <span style={styles.timePill}>{(item.checkin_time || item.event_time) ? formatTime(item.checkin_time || item.event_time) : 'Sem hora'}</span>
                                         </div>
                                       </div>
                                       <div style={styles.itemTopRight}>
@@ -1186,6 +1222,9 @@ export default function TravelScreen({ API_URL }) {
                                     <div style={styles.itemBottomRow}>
                                       <div style={styles.simpleDescriptionCell}>
                                         <span style={styles.secondaryTypePill}>{item.accommodation_type || 'Acomodacao'}</span>
+                                        {(item.exit_date || item.checkout_time) && (
+                                          <span style={styles.secondaryTypePill}>Saida {item.exit_date ? formatDateBr(item.exit_date) : '--'} {item.checkout_time ? formatTime(item.checkout_time) : ''}</span>
+                                        )}
                                         <span style={{ ...styles.descriptionText, ...(item.is_completed ? styles.rowCompleted : {}) }}>{item.accommodation_name}</span>
                                       </div>
                                     </div>
@@ -1357,20 +1396,40 @@ export default function TravelScreen({ API_URL }) {
                 </div>
                 <div style={styles.routeRow}>
                   <div style={styles.fieldBlock}>
-                    <label style={styles.fieldLabel}>Data</label>
+                    <label style={styles.fieldLabel}>Data entrada</label>
                     <input
                       type="date"
-                      value={accommodationDraft.event_date}
-                      onChange={(e) => setAccommodationDraft((prev) => ({ ...prev, event_date: e.target.value }))}
+                      value={accommodationDraft.entry_date}
+                      onChange={(e) => setAccommodationDraft((prev) => ({ ...prev, entry_date: e.target.value }))}
                       style={styles.input}
                     />
                   </div>
                   <div style={styles.fieldBlock}>
-                    <label style={styles.fieldLabel}>Hora</label>
+                    <label style={styles.fieldLabel}>Data saida</label>
+                    <input
+                      type="date"
+                      value={accommodationDraft.exit_date}
+                      onChange={(e) => setAccommodationDraft((prev) => ({ ...prev, exit_date: e.target.value }))}
+                      style={styles.input}
+                    />
+                  </div>
+                </div>
+                <div style={styles.routeRow}>
+                  <div style={styles.fieldBlock}>
+                    <label style={styles.fieldLabel}>Hora check-in</label>
                     <input
                       type="time"
-                      value={accommodationDraft.event_time}
-                      onChange={(e) => setAccommodationDraft((prev) => ({ ...prev, event_time: e.target.value }))}
+                      value={accommodationDraft.checkin_time}
+                      onChange={(e) => setAccommodationDraft((prev) => ({ ...prev, checkin_time: e.target.value }))}
+                      style={styles.input}
+                    />
+                  </div>
+                  <div style={styles.fieldBlock}>
+                    <label style={styles.fieldLabel}>Hora check-out</label>
+                    <input
+                      type="time"
+                      value={accommodationDraft.checkout_time}
+                      onChange={(e) => setAccommodationDraft((prev) => ({ ...prev, checkout_time: e.target.value }))}
                       style={styles.input}
                     />
                   </div>

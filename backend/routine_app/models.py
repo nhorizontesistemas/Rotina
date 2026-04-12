@@ -119,7 +119,8 @@ class TravelItineraryItem(models.Model):
     ITEM_TYPE_CHOICES = [
         ('BREAKFAST', 'Cafe da manha'),
         ('AFTERNOON', 'Cafe da tarde'),
-        ('TOUR', 'Passeio'),
+        ('TOUR', 'Ponto turistico'),
+        ('SHOP', 'Lojas'),
         ('LUNCH', 'Almoco'),
         ('DINNER', 'Jantar'),
         ('DESSERT', 'Sobremesa'),
@@ -150,6 +151,10 @@ class TravelAccommodationItem(models.Model):
     travel_plan = models.ForeignKey(TravelPlan, on_delete=models.CASCADE, related_name='accommodation_items')
     event_date = models.DateField(null=True, blank=True)
     event_time = models.TimeField(null=True, blank=True)
+    entry_date = models.DateField(null=True, blank=True)
+    exit_date = models.DateField(null=True, blank=True)
+    checkin_time = models.TimeField(null=True, blank=True)
+    checkout_time = models.TimeField(null=True, blank=True)
     accommodation_type = models.CharField(max_length=100)
     accommodation_name = models.CharField(max_length=200)
     is_completed = models.BooleanField(default=False)
