@@ -273,6 +273,7 @@ export default function TravelScreen({ API_URL }) {
   const [accommodationDraft, setAccommodationDraft] = useState(buildAccommodationDraft());
   const [editingAccommodationId, setEditingAccommodationId] = useState(null);
   const [successMessage, setSuccessMessage] = useState('');
+  const [isTripRegisterOpen, setIsTripRegisterOpen] = useState(false);
   const [isLoadingTrips, setIsLoadingTrips] = useState(false);
   const [pickerState, setPickerState] = useState({ open: false, type: null });
   const [tripFormModal, setTripFormModal] = useState({ open: false, type: null });
@@ -538,6 +539,7 @@ export default function TravelScreen({ API_URL }) {
     setEditingTripId(trip.id);
     setTripDraft(buildTripDraft(trip));
     setActiveTripId(trip.id);
+    setIsTripRegisterOpen(true);
   };
 
   const handleDeleteTrip = async (tripId) => {
@@ -775,12 +777,20 @@ export default function TravelScreen({ API_URL }) {
 
       <div className="card" style={{ padding: '20px' }}>
         <div style={styles.sectionHeader}>
-          <h3 style={styles.sectionTitle}>{editingTripId ? 'Editar viagem' : 'Informacoes gerais'}</h3>
-          {editingTripId && (
+          <button
+            type="button"
+            onClick={() => setIsTripRegisterOpen((prev) => !prev)}
+            style={styles.sectionToggleButton}
+          >
+            <h3 style={styles.sectionTitle}>Cadastro de Viagem</h3>
+            <span style={styles.smallText}>{isTripRegisterOpen ? 'Ocultar' : 'Abrir'}</span>
+          </button>
+          {editingTripId && isTripRegisterOpen && (
             <button onClick={resetTripForm} style={styles.secondaryTextButton}>Cancelar edicao</button>
           )}
         </div>
-        <form onSubmit={handleSaveTrip} style={styles.formColumn}>
+        {isTripRegisterOpen ? (
+          <form onSubmit={handleSaveTrip} style={styles.formColumn}>
           <div style={styles.routeSection}>
             <button
               type="button"
@@ -1004,10 +1014,13 @@ export default function TravelScreen({ API_URL }) {
               </div>
             </div>
           </div>
-          <button type="submit" style={styles.primaryButton}>
-            <Plus size={18} /> {editingTripId ? 'Salvar viagem' : 'Criar viagem'}
-          </button>
-        </form>
+            <button type="submit" style={styles.primaryButton}>
+              <Plus size={18} /> {editingTripId ? 'Salvar viagem' : 'Criar viagem'}
+            </button>
+          </form>
+        ) : (
+          <p style={{ ...styles.routeSectionTitle, margin: 0 }}>Toque em "Abrir" para cadastrar ou editar uma viagem.</p>
+        )}
       </div>
 
       <div className="card" style={{ padding: '20px' }}>
@@ -1613,6 +1626,18 @@ const styles = {
     alignItems: 'center',
     marginBottom: '14px',
     gap: '12px'
+  },
+  sectionToggleButton: {
+    border: 'none',
+    background: 'transparent',
+    padding: 0,
+    display: 'flex',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    gap: '10px',
+    width: '100%',
+    cursor: 'pointer',
+    textAlign: 'left'
   },
   sectionTitle: {
     margin: 0,
