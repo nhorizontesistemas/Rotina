@@ -1087,28 +1087,37 @@ export default function TravelScreen({ API_URL }) {
                                 </div>
                                 {group.rows.map((item) => (
                                   <div key={item.id} style={styles.itemRowCard}>
-                                    <button
-                                      type="button"
-                                      onClick={() => handleToggleItineraryCompleted(item.id, trip.id, item.is_completed)}
-                                      style={styles.checkButton}
-                                      title={item.is_completed ? 'Marcar como pendente' : 'Marcar como concluido'}
-                                    >
-                                      {item.is_completed ? <CheckCircle2 size={18} color="#0f766e" /> : <Circle size={18} color="#64748b" />}
-                                    </button>
-                                    <div style={styles.itemMetaGroup}>
-                                      <span style={styles.timePill}>{item.event_time ? formatTime(item.event_time) : 'Sem hora'}</span>
+                                    <div style={styles.itemTopRow}>
+                                      <div style={styles.itemTopLeft}>
+                                        <button
+                                          type="button"
+                                          onClick={() => handleToggleItineraryCompleted(item.id, trip.id, item.is_completed)}
+                                          style={styles.checkButton}
+                                          title={item.is_completed ? 'Marcar como pendente' : 'Marcar como concluido'}
+                                        >
+                                          {item.is_completed ? <CheckCircle2 size={18} color="#0f766e" /> : <Circle size={18} color="#64748b" />}
+                                        </button>
+                                        <div style={styles.itemMetaGroup}>
+                                          <span style={styles.timePill}>{item.event_time ? formatTime(item.event_time) : 'Sem hora'}</span>
+                                        </div>
+                                      </div>
+                                      <div style={styles.itemTopRight}>
+                                        <span style={styles.simpleValueCell}>R$ {toMoney(item.expected_value || item.value)}</span>
+                                        <div style={styles.simpleActionCell}>
+                                          <button onClick={() => handleEditItinerary(item, trip.id)} style={styles.iconButton} title="Editar roteiro">
+                                            <Edit2 size={16} />
+                                          </button>
+                                          <button onClick={() => handleDeleteItinerary(item.id, trip.id)} style={styles.iconButton} title="Excluir roteiro">
+                                            <Trash2 size={16} />
+                                          </button>
+                                        </div>
+                                      </div>
                                     </div>
-                                    <div style={styles.simpleDescriptionCell}>
-                                      <span style={{ ...styles.descriptionText, ...(item.is_completed ? styles.rowCompleted : {}) }}>{item.description}</span>
-                                    </div>
-                                    <span style={styles.simpleValueCell}>R$ {toMoney(item.expected_value || item.value)}</span>
-                                    <div style={styles.simpleActionCell}>
-                                      <button onClick={() => handleEditItinerary(item, trip.id)} style={styles.iconButton} title="Editar roteiro">
-                                        <Edit2 size={16} />
-                                      </button>
-                                      <button onClick={() => handleDeleteItinerary(item.id, trip.id)} style={styles.iconButton} title="Excluir roteiro">
-                                        <Trash2 size={16} />
-                                      </button>
+                                    <div style={styles.itemBottomRow}>
+                                      <div style={styles.simpleDescriptionCell}>
+                                        <span style={styles.secondaryTypePill}>{itineraryTypeLabels[item.item_type] || item.item_type}</span>
+                                        <span style={{ ...styles.descriptionText, ...(item.is_completed ? styles.rowCompleted : {}) }}>{item.description}</span>
+                                      </div>
                                     </div>
                                   </div>
                                 ))}
@@ -1135,28 +1144,37 @@ export default function TravelScreen({ API_URL }) {
                                 </div>
                                 {group.rows.map((item) => (
                                   <div key={item.id} style={styles.itemRowCard}>
-                                    <button
-                                      type="button"
-                                      onClick={() => handleToggleAccommodationCompleted(item.id, trip.id, item.is_completed)}
-                                      style={styles.checkButton}
-                                      title={item.is_completed ? 'Marcar como pendente' : 'Marcar como concluido'}
-                                    >
-                                      {item.is_completed ? <CheckCircle2 size={18} color="#0f766e" /> : <Circle size={18} color="#64748b" />}
-                                    </button>
-                                    <div style={styles.itemMetaGroup}>
-                                      <span style={styles.timePill}>{item.event_time ? formatTime(item.event_time) : 'Sem hora'}</span>
+                                    <div style={styles.itemTopRow}>
+                                      <div style={styles.itemTopLeft}>
+                                        <button
+                                          type="button"
+                                          onClick={() => handleToggleAccommodationCompleted(item.id, trip.id, item.is_completed)}
+                                          style={styles.checkButton}
+                                          title={item.is_completed ? 'Marcar como pendente' : 'Marcar como concluido'}
+                                        >
+                                          {item.is_completed ? <CheckCircle2 size={18} color="#0f766e" /> : <Circle size={18} color="#64748b" />}
+                                        </button>
+                                        <div style={styles.itemMetaGroup}>
+                                          <span style={styles.timePill}>{item.event_time ? formatTime(item.event_time) : 'Sem hora'}</span>
+                                        </div>
+                                      </div>
+                                      <div style={styles.itemTopRight}>
+                                        <span style={styles.simpleValueCell}>R$ {toMoney(item.expected_value || item.accommodation_total)}</span>
+                                        <div style={styles.simpleActionCell}>
+                                          <button onClick={() => handleEditAccommodation(item, trip.id)} style={styles.iconButton} title="Editar acomodacao">
+                                            <Edit2 size={16} />
+                                          </button>
+                                          <button onClick={() => handleDeleteAccommodation(item.id, trip.id)} style={styles.iconButton} title="Excluir acomodacao">
+                                            <Trash2 size={16} />
+                                          </button>
+                                        </div>
+                                      </div>
                                     </div>
-                                    <div style={styles.simpleDescriptionCell}>
-                                      <span style={{ ...styles.descriptionText, ...(item.is_completed ? styles.rowCompleted : {}) }}>{item.accommodation_name}</span>
-                                    </div>
-                                    <span style={styles.simpleValueCell}>R$ {toMoney(item.expected_value || item.accommodation_total)}</span>
-                                    <div style={styles.simpleActionCell}>
-                                      <button onClick={() => handleEditAccommodation(item, trip.id)} style={styles.iconButton} title="Editar acomodacao">
-                                        <Edit2 size={16} />
-                                      </button>
-                                      <button onClick={() => handleDeleteAccommodation(item.id, trip.id)} style={styles.iconButton} title="Excluir acomodacao">
-                                        <Trash2 size={16} />
-                                      </button>
+                                    <div style={styles.itemBottomRow}>
+                                      <div style={styles.simpleDescriptionCell}>
+                                        <span style={styles.secondaryTypePill}>{item.accommodation_type || 'Acomodacao'}</span>
+                                        <span style={{ ...styles.descriptionText, ...(item.is_completed ? styles.rowCompleted : {}) }}>{item.accommodation_name}</span>
+                                      </div>
                                     </div>
                                   </div>
                                 ))}
@@ -1826,12 +1844,35 @@ const styles = {
   },
   itemRowCard: {
     display: 'flex',
-    alignItems: 'center',
-    gap: '8px',
+    flexDirection: 'column',
+    gap: '6px',
     fontSize: '12px',
     color: '#0f172a',
     padding: '10px 0',
     borderTop: '1px solid #eef2ff'
+  },
+  itemTopRow: {
+    display: 'flex',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    gap: '10px',
+    width: '100%'
+  },
+  itemTopLeft: {
+    display: 'flex',
+    alignItems: 'center',
+    gap: '8px',
+    minWidth: 0
+  },
+  itemTopRight: {
+    display: 'flex',
+    alignItems: 'center',
+    gap: '6px',
+    flexShrink: 0
+  },
+  itemBottomRow: {
+    width: '100%',
+    paddingLeft: '36px'
   },
   itemMetaGroup: {
     display: 'flex',
@@ -1843,15 +1884,31 @@ const styles = {
   simpleDescriptionCell: {
     display: 'flex',
     alignItems: 'center',
+    gap: '8px',
     minWidth: 0,
     flex: 1
+  },
+  secondaryTypePill: {
+    display: 'inline-flex',
+    alignItems: 'center',
+    flexShrink: 0,
+    background: '#f1f5f9',
+    color: '#475569',
+    border: '1px solid #cbd5e1',
+    borderRadius: '999px',
+    padding: '2px 7px',
+    fontSize: '10px',
+    fontWeight: '700',
+    whiteSpace: 'nowrap'
   },
   descriptionText: {
     display: 'block',
     minWidth: 0,
     overflow: 'hidden',
     textOverflow: 'ellipsis',
-    whiteSpace: 'nowrap',
+    WebkitLineClamp: 2,
+    WebkitBoxOrient: 'vertical',
+    whiteSpace: 'normal',
     lineHeight: '1.35',
     fontWeight: '600',
     color: '#0f172a'
