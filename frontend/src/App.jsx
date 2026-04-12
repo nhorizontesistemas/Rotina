@@ -25,6 +25,20 @@ function timeToMinutes(time) {
   return (hours * 60) + minutes;
 }
 
+function sortRoutines(routines) {
+  return [...routines].sort((a, b) => {
+    const aMinutes = timeToMinutes(a.time);
+    const bMinutes = timeToMinutes(b.time);
+
+    if (aMinutes === null && bMinutes === null) {
+      return a.name.localeCompare(b.name, 'pt-BR');
+    }
+    if (aMinutes === null) return 1;
+    if (bMinutes === null) return -1;
+    return aMinutes - bMinutes;
+  });
+}
+
 function App() {
   const [currentDate, setCurrentDate] = useState(new Date());
   const [isModalOpen, setIsModalOpen] = useState(false);
@@ -67,19 +81,7 @@ function App() {
           notes: log.notes
         }));
 
-        mappedRoutines.sort((a, b) => {
-          const aMinutes = timeToMinutes(a.time);
-          const bMinutes = timeToMinutes(b.time);
-
-          if (aMinutes === null && bMinutes === null) {
-            return a.name.localeCompare(b.name, 'pt-BR');
-          }
-          if (aMinutes === null) return 1;
-          if (bMinutes === null) return -1;
-          return aMinutes - bMinutes;
-        });
-
-        setDailyRoutines(mappedRoutines);
+        setDailyRoutines(sortRoutines(mappedRoutines));
       })
       .catch(err => console.error('Erro ao buscar logs:', err));
   };
@@ -128,20 +130,36 @@ function App() {
   const handleDrink = async (amount) => {
     if (!hydration.id) return;
     const newConsumed = Math.min(hydration.consumed + amount, hydration.goal);
-    await fetch(`${API_URL}/hydration/${hydration.id}/`, {
+    const previousHydration = hydration;
+
+    setHydration(prev => ({ ...prev, consumed: newConsumed }));
+
+    const response = await fetch(`${API_URL}/hydration/${hydration.id}/`, {
       method: 'PATCH', headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ consumed: newConsumed })
     });
-    fetchDayData();
+
+    if (!response.ok) {
+      setHydration(previousHydration);
+      fetchDayData();
+    }
   };
 
   const handleResetDrink = async () => {
     if (!hydration.id) return;
-    await fetch(`${API_URL}/hydration/${hydration.id}/`, {
+    const previousHydration = hydration;
+
+    setHydration(prev => ({ ...prev, consumed: 0 }));
+
+    const response = await fetch(`${API_URL}/hydration/${hydration.id}/`, {
       method: 'PATCH', headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ consumed: 0 })
     });
-    fetchDayData();
+
+    if (!response.ok) {
+      setHydration(previousHydration);
+      fetchDayData();
+    }
   };
 
   const handleEditGoal = async () => {
@@ -162,20 +180,39 @@ function App() {
   const handleToggleRoutine = async (id) => {
     const r = dailyRoutines.find(x => x.id === id);
     if (!r) return;
-    await fetch(`${API_URL}/logs/${r.log_id}/`, {
+    const nextCompleted = !r.completed;
+
+    setDailyRoutines(prev => prev.map(item => (
+      item.id === id ? { ...item, completed: nextCompleted } : item
+    )));
+
+    const response = await fetch(`${API_URL}/logs/${r.log_id}/`, {
       method: 'PATCH', headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ completed: !r.completed })
+      body: JSON.stringify({ completed: nextCompleted })
     });
-    fetchDayData();
+
+    if (!response.ok) {
+      setDailyRoutines(prev => prev.map(item => (
+        item.id === id ? { ...item, completed: r.completed } : item
+      )));
+      fetchDayData();
+    }
   };
 
   const handleDeleteRoutine = async (id) => {
     const r = dailyRoutines.find(x => x.id === id);
     if (!r) return;
-    await fetch(`${API_URL}/logs/${r.log_id}/`, {
+    const previousRoutines = dailyRoutines;
+    setDailyRoutines(prev => prev.filter(item => item.id !== id));
+
+    const response = await fetch(`${API_URL}/logs/${r.log_id}/`, {
       method: 'DELETE'
     });
-    fetchDayData();
+
+    if (!response.ok) {
+      setDailyRoutines(previousRoutines);
+      fetchDayData();
+    }
   };
 
   const handleUpdateRoutineNotes = async (id) => {
@@ -183,11 +220,24 @@ function App() {
     if (!r) return;
     const newNote = window.prompt("Observação/Nota da Rotina:", r.notes || "");
     if (newNote !== null) {
-      await fetch(`${API_URL}/logs/${r.log_id}/`, {
+      const trimmedNote = newNote.trim();
+      const previousNote = r.notes;
+
+      setDailyRoutines(prev => prev.map(item => (
+        item.id === id ? { ...item, notes: trimmedNote } : item
+      )));
+
+      const response = await fetch(`${API_URL}/logs/${r.log_id}/`, {
         method: 'PATCH', headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ notes: newNote.trim() })
+        body: JSON.stringify({ notes: trimmedNote })
       });
-      fetchDayData();
+
+      if (!response.ok) {
+        setDailyRoutines(prev => prev.map(item => (
+          item.id === id ? { ...item, notes: previousNote } : item
+        )));
+        fetchDayData();
+      }
     }
   };
 
@@ -244,6 +294,18 @@ function App() {
         console.error('Erro ao criar log:', logRes.status);
         return;
       }
+
+      const createdLog = await logRes.json();
+      const newRoutineEntry = {
+        log_id: createdLog.id,
+        id: routine.id,
+        name: routine.name,
+        time: routine.time,
+        icon: routine.icon,
+        color: routine.color,
+        completed: createdLog.completed,
+        notes: createdLog.notes
+      };
       
       console.log('Log criado para hoje');
       setNewRoutineName('');
@@ -251,10 +313,12 @@ function App() {
       setNewRoutineIcon('');
       setNewRoutineColor('#2563eb');
       setIsModalOpen(false);
-      fetchDayData();
-      fetchCatalog();
+      setDailyRoutines(prev => sortRoutines([...prev, newRoutineEntry]));
+      setRoutineCatalog(prev => sortRoutines([...prev, routine]));
     } catch (error) {
       console.error('Erro ao adicionar rotina:', error);
+      fetchDayData();
+      fetchCatalog();
     }
   };
 
@@ -270,26 +334,56 @@ function App() {
 
     if (!routineData.name) return;
 
-    await fetch(`${API_URL}/routines/${editingRoutine.id}/`, {
+    const response = await fetch(`${API_URL}/routines/${editingRoutine.id}/`, {
       method: 'PATCH',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify(routineData)
     });
+
+    if (!response.ok) {
+      fetchDayData();
+      fetchCatalog();
+      return;
+    }
+
+    const updatedRoutine = await response.json();
+
+    setRoutineCatalog(prev => sortRoutines(prev.map(item => (
+      item.id === updatedRoutine.id
+        ? { ...item, name: updatedRoutine.name, time: updatedRoutine.time, icon: updatedRoutine.icon, color: updatedRoutine.color }
+        : item
+    ))));
+
+    setDailyRoutines(prev => sortRoutines(prev.map(item => (
+      item.id === updatedRoutine.id
+        ? { ...item, name: updatedRoutine.name, time: updatedRoutine.time, icon: updatedRoutine.icon, color: updatedRoutine.color }
+        : item
+    ))));
+
     setEditingRoutine(null);
     setNewRoutineName('');
     setNewRoutineTime('');
     setNewRoutineIcon('');
     setNewRoutineColor('#2563eb');
     setIsModalOpen(false);
-    fetchDayData();
-    fetchCatalog();
   };
 
   const handleDeleteFromCatalog = async (id) => {
     if (window.confirm("Excluir esta rotina definitivamente do seu catálogo?")) {
-      await fetch(`${API_URL}/routines/${id}/`, { method: 'DELETE' });
-      fetchCatalog();
-      fetchDayData(); // Refresh daily list in case it was there
+      const prevCatalog = routineCatalog;
+      const prevDaily = dailyRoutines;
+
+      setRoutineCatalog(prev => prev.filter(item => item.id !== id));
+      setDailyRoutines(prev => prev.filter(item => item.id !== id));
+
+      const response = await fetch(`${API_URL}/routines/${id}/`, { method: 'DELETE' });
+
+      if (!response.ok) {
+        setRoutineCatalog(prevCatalog);
+        setDailyRoutines(prevDaily);
+        fetchCatalog();
+        fetchDayData();
+      }
     }
   };
 

@@ -46,3 +46,15 @@ class Transaction(models.Model):
 
     def __str__(self):
         return f"{self.icon} {self.description} ({self.category})" if self.icon else f"{self.description} ({self.category})"
+
+
+class MonthlyFinanceState(models.Model):
+    year = models.IntegerField()
+    month = models.PositiveSmallIntegerField()
+    initialized_at = models.DateTimeField(auto_now_add=True)
+
+    class Meta:
+        unique_together = ('year', 'month')
+
+    def __str__(self):
+        return f"{self.month:02d}/{self.year}"
