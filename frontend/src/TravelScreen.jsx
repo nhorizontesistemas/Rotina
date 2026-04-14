@@ -42,6 +42,26 @@ const itineraryTypeIcons = {
 
 const itineraryTypeOrder = ['BREAKFAST', 'AFTERNOON', 'TOUR', 'SHOP', 'LUNCH', 'DINNER', 'DESSERT', 'OTHER'];
 
+const itineraryTypePillColors = {
+  BREAKFAST: { background: '#fff7ed', border: '#fdba74', color: '#9a3412' },
+  AFTERNOON: { background: '#fefce8', border: '#fde047', color: '#854d0e' },
+  TOUR: { background: '#eff6ff', border: '#93c5fd', color: '#1d4ed8' },
+  SHOP: { background: '#fdf2f8', border: '#f9a8d4', color: '#9d174d' },
+  LUNCH: { background: '#ecfdf5', border: '#86efac', color: '#166534' },
+  DINNER: { background: '#eef2ff', border: '#a5b4fc', color: '#4338ca' },
+  DESSERT: { background: '#fdf4ff', border: '#e9d5ff', color: '#7e22ce' },
+  OTHER: { background: '#f8fafc', border: '#cbd5e1', color: '#334155' }
+};
+
+function getItineraryTypePillStyle(type) {
+  const palette = itineraryTypePillColors[type] || itineraryTypePillColors.OTHER;
+  return {
+    background: palette.background,
+    border: `1px solid ${palette.border}`,
+    color: palette.color
+  };
+}
+
 
 function toMoney(value) {
   return Number(value || 0).toFixed(2);
@@ -1164,7 +1184,10 @@ export default function TravelScreen({ API_URL }) {
                                     </div>
                                     <div style={styles.itemBottomRow}>
                                       <div style={styles.simpleDescriptionCell}>
-                                        <span style={styles.secondaryTypePill}>{itineraryTypeLabels[item.item_type] || item.item_type}</span>
+                                        <span style={{ ...styles.secondaryTypePill, ...getItineraryTypePillStyle(item.item_type) }}>
+                                          <span style={styles.secondaryTypeIcon}>{itineraryTypeIcons[item.item_type] || itineraryTypeIcons.OTHER}</span>
+                                          {itineraryTypeLabels[item.item_type] || item.item_type}
+                                        </span>
                                         <span style={{ ...styles.descriptionText, ...(item.is_completed ? styles.rowCompleted : {}) }}>{item.description}</span>
                                       </div>
                                     </div>
@@ -1188,7 +1211,14 @@ export default function TravelScreen({ API_URL }) {
                             {accommodationByDate.map((group) => (
                               <div key={`ac-${trip.id}-${group.date}`} style={styles.groupCard}>
                                 <div style={styles.groupTitleRow}>
-                                  <strong style={styles.groupTitle}>{group.displayDate}</strong>
+                                  <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+                                    <strong style={styles.groupTitle}>{group.displayDate}</strong>
+                                    {Array.from(new Set(group.rows.map(r => r.accommodation_type || 'Acomodação'))).map((type, idx) => (
+                                      <span key={idx} style={styles.secondaryTypePill}>
+                                        {type}
+                                      </span>
+                                    ))}
+                                  </div>
                                   <span style={styles.groupCount}>{group.rows.length} item{group.rows.length > 1 ? 's' : ''}</span>
                                 </div>
                                 {group.rows.map((item) => (
@@ -1204,7 +1234,9 @@ export default function TravelScreen({ API_URL }) {
                                           {item.is_completed ? <CheckCircle2 size={18} color="#0f766e" /> : <Circle size={18} color="#64748b" />}
                                         </button>
                                         <div style={styles.itemMetaGroup}>
-                                          <span style={styles.timePill}>{item.event_time ? formatTime(item.event_time) : 'Sem hora'}</span>
+                                          <span style={{ ...styles.descriptionTextAccommodation, ...(item.is_completed ? styles.rowCompleted : {}) }}>
+                                            {item.accommodation_name}
+                                          </span>
                                         </div>
                                       </div>
                                       <div style={styles.itemTopRight}>
@@ -1220,12 +1252,21 @@ export default function TravelScreen({ API_URL }) {
                                       </div>
                                     </div>
                                     <div style={styles.itemBottomRow}>
-                                      <div style={styles.simpleDescriptionCell}>
-                                        <span style={styles.secondaryTypePill}>{item.accommodation_type || 'Acomodacao'}</span>
+                                      <div style={styles.accommodationInfoBlock}>
+                                        <div style={styles.accommodationMetaRow}>
+                                          <div style={styles.accommodationPrimaryMetaRow}>
+                                            {(item.entry_date || item.checkin_time || item.exit_date || item.checkout_time) && (
+                                              <span style={{ ...styles.secondaryTypePill, background: '#f0fdfa', borderColor: '#99f6e4', color: '#0f766e' }}>
+                                                📥 Check-in {item.entry_date ? formatDateBr(item.entry_date) : '--'} {item.checkin_time ? formatTime(item.checkin_time) : '--:--'}
+                                              </span>
+                                            )}
+                                          </div>
                                         {(item.exit_date || item.checkout_time) && (
-                                          <span style={styles.secondaryTypePill}>Saida {item.exit_date ? formatDateBr(item.exit_date) : '--'} {item.checkout_time ? formatTime(item.checkout_time) : ''}</span>
+                                          <span style={{ ...styles.secondaryTypePill, background: '#fff7ed', borderColor: '#fdba74', color: '#c2410c' }}>
+                                            📤 Check-out {item.exit_date ? formatDateBr(item.exit_date) : '--'} {item.checkout_time ? formatTime(item.checkout_time) : '--:--'}
+                                          </span>
                                         )}
-                                        <span style={{ ...styles.descriptionText, ...(item.is_completed ? styles.rowCompleted : {}) }}>{item.accommodation_name}</span>
+                                        </div>
                                       </div>
                                     </div>
                                   </div>
@@ -1972,6 +2013,26 @@ const styles = {
     minWidth: 0,
     flex: 1
   },
+  accommodationInfoBlock: {
+    display: 'flex',
+    flexDirection: 'column',
+    gap: '6px',
+    minWidth: 0,
+    flex: 1
+  },
+  accommodationMetaRow: {
+    display: 'flex',
+    alignItems: 'center',
+    gap: '8px',
+    flexWrap: 'wrap',
+    minWidth: 0
+  },
+  accommodationPrimaryMetaRow: {
+    display: 'flex',
+    alignItems: 'center',
+    gap: '8px',
+    minWidth: 0
+  },
   secondaryTypePill: {
     display: 'inline-flex',
     alignItems: 'center',
@@ -1985,12 +2046,29 @@ const styles = {
     fontWeight: '700',
     whiteSpace: 'nowrap'
   },
+  secondaryTypeIcon: {
+    marginRight: '5px',
+    fontSize: '12px',
+    lineHeight: 1
+  },
   descriptionText: {
     display: 'block',
     minWidth: 0,
     overflow: 'hidden',
     textOverflow: 'ellipsis',
     WebkitLineClamp: 2,
+    WebkitBoxOrient: 'vertical',
+    whiteSpace: 'normal',
+    lineHeight: '1.35',
+    fontWeight: '600',
+    color: '#0f172a'
+  },
+  descriptionTextAccommodation: {
+    display: 'block',
+    minWidth: 0,
+    overflow: 'hidden',
+    textOverflow: 'ellipsis',
+    WebkitLineClamp: 3,
     WebkitBoxOrient: 'vertical',
     whiteSpace: 'normal',
     lineHeight: '1.35',

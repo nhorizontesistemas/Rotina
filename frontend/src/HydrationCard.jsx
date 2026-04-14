@@ -33,6 +33,10 @@ export default function HydrationCard({ consumed, goal, onDrink, onEditGoal, onR
             <Droplet size={18} />
             +400ml
           </button>
+          <button className="drink-btn" onClick={() => onDrink(500)}>
+            <Droplet size={18} />
+            +500ml
+          </button>
           <button className="drink-btn" onClick={() => onDrink(600)}>
             <Droplet size={18} />
             +600ml

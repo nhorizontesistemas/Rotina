@@ -9,9 +9,14 @@ import { Plus, ListTodo, Wallet, Plane } from 'lucide-react'
 import FinancesScreen from './FinancesScreen'
 import TravelScreen from './TravelScreen'
 
-const API_URL = window.location.hostname === 'localhost' 
-  ? `http://${window.location.hostname}:8000/api`
-  : `${window.location.origin}/_/backend/api`;
+const LOCAL_HOSTS = new Set(['localhost', '127.0.0.1', '::1']);
+const isPrivateIpv4 = /^10\.|^192\.168\.|^172\.(1[6-9]|2\d|3[0-1])\./.test(window.location.hostname);
+const isLocalEnvironment = LOCAL_HOSTS.has(window.location.hostname) || isPrivateIpv4;
+const apiFromEnv = import.meta.env.VITE_API_URL;
+
+const API_URL = apiFromEnv || (isLocalEnvironment
+  ? `http://${window.location.hostname}:8001/api`
+  : `${window.location.origin}/_/backend/api`);
 
 function getDateKey(date) {
   const d = new Date(date);
