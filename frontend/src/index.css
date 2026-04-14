@@ -205,20 +205,22 @@ body {
 
 .drink-actions {
   display: flex;
-  gap: 12px;
+  gap: 8px;
   margin-top: 24px;
   justify-content: center;
+  flex-wrap: wrap;
 }
 
 .drink-btn {
   background: white;
   border: 1px solid rgba(59, 130, 246, 0.1);
-  padding: 12px 20px;
-  border-radius: 16px;
+  padding: 10px 14px;
+  border-radius: 14px;
+  font-size: 14px;
   font-weight: 600;
   display: flex;
   align-items: center;
-  gap: 8px;
+  gap: 6px;
   color: var(--primary-color);
   cursor: pointer;
   box-shadow: var(--shadow-sm);
