@@ -1240,7 +1240,6 @@ export default function TravelScreen({ API_URL }) {
                                         </div>
                                       </div>
                                       <div style={styles.itemTopRight}>
-                                        <span style={styles.simpleValueCell}>R$ {toMoney(item.expected_value || item.accommodation_total)}</span>
                                         <div style={styles.simpleActionCell}>
                                           <button onClick={() => handleEditAccommodation(item, trip.id)} style={styles.iconButton} title="Editar acomodacao">
                                             <Edit2 size={16} />
@@ -1253,6 +1252,7 @@ export default function TravelScreen({ API_URL }) {
                                     </div>
                                     <div style={styles.itemBottomRow}>
                                       <div style={styles.accommodationInfoBlock}>
+                                        <span style={{ ...styles.simpleValueCell, fontSize: '14px' }}>R$ {toMoney(item.expected_value || item.accommodation_total)}</span>
                                         <div style={styles.accommodationMetaRow}>
                                           <div style={styles.accommodationPrimaryMetaRow}>
                                             {(item.entry_date || item.checkin_time || item.exit_date || item.checkout_time) && (
