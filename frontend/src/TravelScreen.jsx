@@ -1,5 +1,5 @@
 import React, { useEffect, useRef, useState } from 'react';
-import { Plus, Plane, BedDouble, Trash2, Edit2, Route, Ticket, Fuel, CheckCircle2, Circle } from 'lucide-react';
+import { Plus, Plane, BedDouble, Trash2, Edit2, Route, Ticket, Fuel, CheckSquare, Square } from 'lucide-react';
 
 const transportLabels = {
   CAR: 'Carro',
@@ -107,13 +107,10 @@ function buildAccommodationDraft(item) {
 
 function buildItineraryDraft(item) {
   return {
-    item_type: item?.item_type || 'BREAKFAST',
+    item_type: 'OTHER',
     description: item?.description || '',
     event_date: item?.event_date || '',
-    event_time: item?.event_time || '',
-    expected_value: item?.expected_value || item?.value || '0.00',
-    real_value: item?.real_value || item?.value || '0.00',
-    notes: item?.notes || ''
+    notes: ''
   };
 }
 
@@ -319,7 +316,7 @@ export default function TravelScreen({ API_URL }) {
   const [expandedTripId, setExpandedTripId] = useState(null);
   const [tripDraft, setTripDraft] = useState(buildTripDraft());
   const [editingTripId, setEditingTripId] = useState(null);
-  const [itineraryDraft, setItineraryDraft] = useState(buildItineraryDraft());
+  const [itineraryDraft, setItineraryDraft] = useState([buildItineraryDraft()]);
   const [editingItineraryId, setEditingItineraryId] = useState(null);
   const [accommodationDraft, setAccommodationDraft] = useState(buildAccommodationDraft());
   const [editingAccommodationId, setEditingAccommodationId] = useState(null);
@@ -512,7 +509,7 @@ export default function TravelScreen({ API_URL }) {
   };
 
   const resetItineraryForm = () => {
-    setItineraryDraft(buildItineraryDraft());
+    setItineraryDraft([buildItineraryDraft()]);
     setEditingItineraryId(null);
   };
 
@@ -524,7 +521,7 @@ export default function TravelScreen({ API_URL }) {
   const openTripFormModal = (type, tripId) => {
     setActiveTripId(tripId);
     if (type === 'itinerary' && !editingItineraryId) {
-      setItineraryDraft(buildItineraryDraft());
+      setItineraryDraft([buildItineraryDraft()]);
     }
     if (type === 'accommodation' && !editingAccommodationId) {
       setAccommodationDraft(buildAccommodationDraft());
@@ -616,54 +613,87 @@ export default function TravelScreen({ API_URL }) {
 
   const handleSaveItinerary = async (e) => {
     e.preventDefault();
-    if (!activeTrip || !itineraryDraft.description.trim()) return;
+    if (!activeTrip) return;
 
-    const payload = {
-      ...itineraryDraft,
-      travel_plan: activeTrip.id,
-      event_date: itineraryDraft.event_date || null,
-      event_time: itineraryDraft.event_time || null,
-      expected_value: Number(itineraryDraft.expected_value || 0),
-      real_value: Number(itineraryDraft.real_value || 0),
-      notes: itineraryDraft.notes || null
-    };
+    const itemsToSave = itineraryDraft.filter(item => item.description.trim());
+    if (itemsToSave.length === 0) return;
 
     const isEditing = Boolean(editingItineraryId);
-    const url = isEditing
-      ? `${API_URL}/travel-itinerary-items/${editingItineraryId}/`
-      : `${API_URL}/travel-itinerary-items/`;
-    const method = isEditing ? 'PATCH' : 'POST';
+    
+    try {
+      const savedItems = [];
+      const sharedDate = itemsToSave[0].event_date || null;
 
-    const response = await fetch(url, {
-      method,
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify(payload)
-    });
+      for (const itemDraft of itemsToSave) {
+        const payload = {
+          ...itemDraft,
+          travel_plan: activeTrip.id,
+          item_type: 'OTHER',
+          event_date: sharedDate,
+          event_time: null,
+          expected_value: 0,
+          real_value: 0,
+          notes: null
+        };
 
-    if (!response.ok) {
+        const url = isEditing
+          ? `${API_URL}/travel-itinerary-items/${editingItineraryId}/`
+          : `${API_URL}/travel-itinerary-items/`;
+        const method = isEditing ? 'PATCH' : 'POST';
+
+        const response = await fetch(url, {
+          method,
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify(payload)
+        });
+
+        if (response.ok) {
+          const saved = await response.json();
+          savedItems.push(saved);
+        }
+      }
+
+      setTrips((prev) => prev.map((trip) => {
+        if (trip.id !== activeTrip.id) return trip;
+        const current = trip.itinerary_items || [];
+        let next = [...current];
+        
+        savedItems.forEach(saved => {
+          if (isEditing) {
+            next = next.map(item => item.id === saved.id ? saved : item);
+          } else {
+            next = [saved, ...next];
+          }
+        });
+        
+        return { ...trip, itinerary_items: next };
+      }));
+
+      resetItineraryForm();
+      setSuccessMessage(isEditing ? 'Roteiro atualizado' : `${savedItems.length} item(ns) adicionado(s)`);
+      setTripFormModal({ open: false, type: null });
+    } catch (error) {
+      console.error('Erro ao salvar roteiros:', error);
       fetchTrips();
-      return;
     }
+  };
 
-    const saved = await response.json();
-    setTrips((prev) => prev.map((trip) => {
-      if (trip.id !== activeTrip.id) return trip;
-      const current = trip.itinerary_items || [];
-      const next = isEditing
-        ? current.map((item) => (item.id === saved.id ? saved : item))
-        : [saved, ...current];
-      return { ...trip, itinerary_items: next };
-    }));
+  const addItineraryRow = () => {
+    setItineraryDraft(prev => {
+      const last = prev[prev.length - 1];
+      return [...prev, buildItineraryDraft({ event_date: last?.event_date || '' })];
+    });
+  };
 
-    resetItineraryForm();
-    setSuccessMessage(isEditing ? 'Roteiro atualizado' : 'Roteiro adicionado');
-    setTripFormModal({ open: false, type: null });
+  const removeItineraryRow = (index) => {
+    if (itineraryDraft.length <= 1) return;
+    setItineraryDraft(prev => prev.filter((_, i) => i !== index));
   };
 
   const handleEditItinerary = (item, tripId = activeTrip?.id) => {
     if (tripId) setActiveTripId(tripId);
     setEditingItineraryId(item.id);
-    setItineraryDraft(buildItineraryDraft(item));
+    setItineraryDraft([buildItineraryDraft(item)]);
     setTripFormModal({ open: true, type: 'itinerary' });
   };
 
@@ -1164,14 +1194,30 @@ export default function TravelScreen({ API_URL }) {
                                           style={styles.checkButton}
                                           title={item.is_completed ? 'Marcar como pendente' : 'Marcar como concluido'}
                                         >
-                                          {item.is_completed ? <CheckCircle2 size={18} color="#0f766e" /> : <Circle size={18} color="#64748b" />}
+                                          {item.is_completed ? <CheckSquare size={18} color="#0f766e" /> : <Square size={18} color="#64748b" />}
                                         </button>
-                                        <div style={styles.itemMetaGroup}>
-                                          <span style={styles.timePill}>{(item.checkin_time || item.event_time) ? formatTime(item.checkin_time || item.event_time) : 'Sem hora'}</span>
+                                        <div style={{ display: 'flex', flexDirection: 'column', gap: '4px' }}>
+                                          <span style={{ 
+                                            ...styles.descriptionText, 
+                                            fontWeight: '400', 
+                                            fontSize: '14px',
+                                            ...(item.is_completed ? styles.rowCompleted : {}) 
+                                          }}>
+                                            {item.description}
+                                          </span>
+                                          {item.notes && (
+                                            <span style={{ 
+                                              fontSize: '13px', 
+                                              color: '#64748b', 
+                                              whiteSpace: 'pre-wrap',
+                                              ...(item.is_completed ? styles.rowCompleted : {})
+                                            }}>
+                                              {item.notes}
+                                            </span>
+                                          )}
                                         </div>
                                       </div>
                                       <div style={styles.itemTopRight}>
-                                        <span style={styles.simpleValueCell}>R$ {toMoney(item.expected_value || item.value)}</span>
                                         <div style={styles.simpleActionCell}>
                                           <button onClick={() => handleEditItinerary(item, trip.id)} style={styles.iconButton} title="Editar roteiro">
                                             <Edit2 size={16} />
@@ -1180,15 +1226,6 @@ export default function TravelScreen({ API_URL }) {
                                             <Trash2 size={16} />
                                           </button>
                                         </div>
-                                      </div>
-                                    </div>
-                                    <div style={styles.itemBottomRow}>
-                                      <div style={styles.simpleDescriptionCell}>
-                                        <span style={{ ...styles.secondaryTypePill, ...getItineraryTypePillStyle(item.item_type) }}>
-                                          <span style={styles.secondaryTypeIcon}>{itineraryTypeIcons[item.item_type] || itineraryTypeIcons.OTHER}</span>
-                                          {itineraryTypeLabels[item.item_type] || item.item_type}
-                                        </span>
-                                        <span style={{ ...styles.descriptionText, ...(item.is_completed ? styles.rowCompleted : {}) }}>{item.description}</span>
                                       </div>
                                     </div>
                                   </div>
@@ -1231,7 +1268,7 @@ export default function TravelScreen({ API_URL }) {
                                           style={styles.checkButton}
                                           title={item.is_completed ? 'Marcar como pendente' : 'Marcar como concluido'}
                                         >
-                                          {item.is_completed ? <CheckCircle2 size={18} color="#0f766e" /> : <Circle size={18} color="#64748b" />}
+                                          {item.is_completed ? <CheckSquare size={18} color="#0f766e" /> : <Square size={18} color="#64748b" />}
                                         </button>
                                         <div style={styles.itemMetaGroup}>
                                           <span style={{ ...styles.descriptionTextAccommodation, ...(item.is_completed ? styles.rowCompleted : {}) }}>
@@ -1330,88 +1367,88 @@ export default function TravelScreen({ API_URL }) {
 
             {tripFormModal.type === 'itinerary' ? (
               <form onSubmit={handleSaveItinerary} style={styles.formColumn}>
-                <div style={styles.chipField}>
-                  <span style={styles.chipFieldLabel}>Tipo do roteiro</span>
-                  <button
-                    type="button"
-                    onClick={() => openPicker('itineraryType')}
-                    style={styles.selectTrigger}
+                <div style={{ ...styles.fieldBlock, marginBottom: '20px', paddingBottom: '16px', borderBottom: '1px solid #e2e8f0' }}>
+                  <label style={styles.fieldLabel}>Data Geral do Roteiro</label>
+                  <input
+                    type="date"
+                    value={itineraryDraft[0]?.event_date || ''}
+                    onChange={(e) => setItineraryDraft(prev => prev.map(it => ({ ...it, event_date: e.target.value })))}
+                    style={{ ...styles.input, width: '160px', fontSize: '16px', fontWeight: 'bold' }}
+                  />
+                </div>
+
+                <div style={{ maxHeight: '50vh', overflowY: 'auto', paddingRight: '4px', display: 'flex', flexDirection: 'column', gap: '12px' }}>
+                  <label style={{ ...styles.fieldLabel, marginBottom: '4px' }}>Itens (apenas descrição)</label>
+                  {itineraryDraft.map((item, index) => (
+                    <div key={index} style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+                      <input
+                        type="text"
+                        placeholder="O que vamos fazer?"
+                        value={item.description}
+                        autoFocus={index === itineraryDraft.length - 1 && !editingItineraryId}
+                        onChange={(e) => setItineraryDraft(prev => prev.map((it, i) => i === index ? { ...it, description: e.target.value } : it))}
+                        onKeyDown={(e) => {
+                          if (e.key === 'Enter') {
+                            e.preventDefault();
+                            if (item.description.trim()) addItineraryRow();
+                          }
+                        }}
+                        style={{ ...styles.input, flex: 1 }}
+                      />
+                      {itineraryDraft.length > 1 && !editingItineraryId && (
+                        <button 
+                          type="button" 
+                          onClick={() => removeItineraryRow(index)}
+                          style={{
+                            background: '#fee2e2',
+                            border: 'none',
+                            borderRadius: '50%',
+                            width: '32px',
+                            height: '32px',
+                            display: 'flex',
+                            alignItems: 'center',
+                            justifyContent: 'center',
+                            color: '#ef4444',
+                            cursor: 'pointer',
+                            flexShrink: 0
+                          }}
+                          title="Remover linha"
+                        >
+                          <Trash2 size={16} />
+                        </button>
+                      )}
+                    </div>
+                  ))}
+                </div>
+                
+                {!editingItineraryId && (
+                  <button 
+                    type="button" 
+                    onClick={addItineraryRow}
+                    style={{
+                      marginTop: '12px',
+                      padding: '8px',
+                      borderRadius: '8px',
+                      border: '2px dashed #cbd5e1',
+                      background: 'none',
+                      color: '#64748b',
+                      fontSize: '14px',
+                      cursor: 'pointer',
+                      display: 'flex',
+                      alignItems: 'center',
+                      justifyContent: 'center',
+                      gap: '4px'
+                    }}
                   >
-                    <span style={{ marginRight: '6px' }}>{itineraryTypeIcons[itineraryDraft.item_type]}</span>
-                    {itineraryTypeLabels[itineraryDraft.item_type]}
+                    <Plus size={16} /> Adicionar outro item (ou aperte Enter)
+                  </button>
+                )}
+
+                <div style={{ marginTop: '24px', paddingTop: '16px', borderTop: '1px solid #e2e8f0' }}>
+                  <button type="submit" style={styles.primaryButton}>
+                    {editingItineraryId ? 'Salvar Alteração' : `Salvar (${itineraryDraft.filter(i => i.description.trim()).length}) Item(ns)`}
                   </button>
                 </div>
-                <div style={styles.fieldBlock}>
-                  <label style={styles.fieldLabel}>Descricao</label>
-                  <input
-                    type="text"
-                    placeholder="Ex: Café no Mercado Central"
-                    value={itineraryDraft.description}
-                    onChange={(e) => setItineraryDraft((prev) => ({ ...prev, description: e.target.value }))}
-                    style={styles.input}
-                  />
-                </div>
-                <div style={styles.routeRow}>
-                  <div style={styles.fieldBlock}>
-                    <label style={styles.fieldLabel}>Data</label>
-                    <input
-                      type="date"
-                      value={itineraryDraft.event_date}
-                      onChange={(e) => setItineraryDraft((prev) => ({ ...prev, event_date: e.target.value }))}
-                      style={styles.input}
-                    />
-                  </div>
-                  <div style={styles.fieldBlock}>
-                    <label style={styles.fieldLabel}>Hora</label>
-                    <input
-                      type="time"
-                      value={itineraryDraft.event_time}
-                      onChange={(e) => setItineraryDraft((prev) => ({ ...prev, event_time: e.target.value }))}
-                      style={styles.input}
-                    />
-                  </div>
-                </div>
-                <div style={styles.fieldBlock}>
-                  <label style={styles.fieldLabel}>Valor estimado</label>
-                  <div style={styles.moneyInputWrapper}>
-                    <span style={styles.moneyPrefix}>R$</span>
-                    <input
-                      type="number"
-                      placeholder="0,00"
-                      value={itineraryDraft.expected_value}
-                      onChange={(e) => setItineraryDraft((prev) => ({ ...prev, expected_value: e.target.value }))}
-                      onFocus={(e) => e.target.select()}
-                      style={styles.moneyInput}
-                    />
-                  </div>
-                </div>
-                <div style={styles.fieldBlock}>
-                  <label style={styles.fieldLabel}>Valor real</label>
-                  <div style={styles.moneyInputWrapper}>
-                    <span style={styles.moneyPrefix}>R$</span>
-                    <input
-                      type="number"
-                      placeholder="0,00"
-                      value={itineraryDraft.real_value}
-                      onChange={(e) => setItineraryDraft((prev) => ({ ...prev, real_value: e.target.value }))}
-                      onFocus={(e) => e.target.select()}
-                      style={styles.moneyInput}
-                    />
-                  </div>
-                </div>
-                <div style={styles.fieldBlock}>
-                  <label style={styles.fieldLabel}>Observacoes (opcional)</label>
-                  <input
-                    type="text"
-                    placeholder="Ex: Reservar com antecedencia"
-                    value={itineraryDraft.notes}
-                    onChange={(e) => setItineraryDraft((prev) => ({ ...prev, notes: e.target.value }))}
-                    style={styles.input}
-                  />
-                </div>
-                <button type="submit" style={styles.primaryButton}>
-                  <Plus size={18} /> {editingItineraryId ? 'Salvar roteiro' : 'Adicionar ao roteiro'}
-                </button>
               </form>
             ) : (
               <form onSubmit={handleSaveAccommodation} style={styles.formColumn}>
@@ -2060,7 +2097,8 @@ const styles = {
     WebkitBoxOrient: 'vertical',
     whiteSpace: 'normal',
     lineHeight: '1.35',
-    fontWeight: '600',
+    fontWeight: '400',
+    fontSize: '13px',
     color: '#0f172a'
   },
   descriptionTextAccommodation: {
@@ -2111,7 +2149,7 @@ const styles = {
     padding: '0',
     width: '28px',
     height: '28px',
-    borderRadius: '999px'
+    borderRadius: '8px'
   },
   rowCompleted: {
     textDecoration: 'line-through',

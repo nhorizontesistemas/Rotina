@@ -67,7 +67,7 @@ export default function RoutineChecklist({ routines, onToggle, onDelete, onEdit,
                 <Edit2 size={18} className="action-icon" style={{ color: actionColor }} onClick={(e) => { e.stopPropagation(); onEdit(routine.id); }} />
                 <Trash2 size={18} className="action-icon" style={{ color: actionColor }} onClick={(e) => { e.stopPropagation(); onDelete(routine.id); }} />
                 <div
-                  className={`checkbox-circle ${routine.completed ? 'active' : ''}`}
+                  className={`checkbox-square ${routine.completed ? 'active' : ''}`}
                   onClick={(e) => { e.stopPropagation(); onToggle(routine.id); }}
                 >
                   {routine.completed && <Check size={16} strokeWidth={4} />}
