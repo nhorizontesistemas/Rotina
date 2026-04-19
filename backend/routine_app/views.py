@@ -1,6 +1,6 @@
 from rest_framework import viewsets
-from .models import Hydration, Routine, RoutineLog, Transaction, MonthlyFinanceState, TravelPlan, TravelComboItem, TravelItineraryItem, TravelAccommodationItem
-from .serializers import HydrationSerializer, RoutineSerializer, RoutineLogSerializer, TransactionSerializer, TravelPlanSerializer, TravelComboItemSerializer, TravelItineraryItemSerializer, TravelAccommodationItemSerializer
+from .models import Hydration, Routine, RoutineLog, Transaction, MonthlyFinanceState, TravelPlan, TravelComboItem, TravelItineraryItem, TravelAccommodationItem, BudgetCalculator, BudgetDebt
+from .serializers import HydrationSerializer, RoutineSerializer, RoutineLogSerializer, TransactionSerializer, TravelPlanSerializer, TravelComboItemSerializer, TravelItineraryItemSerializer, TravelAccommodationItemSerializer, BudgetCalculatorSerializer, BudgetDebtSerializer
 from rest_framework.decorators import action
 from rest_framework.response import Response
 from datetime import date, timedelta
@@ -126,3 +126,11 @@ class TravelItineraryItemViewSet(viewsets.ModelViewSet):
 class TravelAccommodationItemViewSet(viewsets.ModelViewSet):
     queryset = TravelAccommodationItem.objects.select_related('travel_plan').all()
     serializer_class = TravelAccommodationItemSerializer
+
+class BudgetCalculatorViewSet(viewsets.ModelViewSet):
+    queryset = BudgetCalculator.objects.prefetch_related('debts').all()
+    serializer_class = BudgetCalculatorSerializer
+
+class BudgetDebtViewSet(viewsets.ModelViewSet):
+    queryset = BudgetDebt.objects.all()
+    serializer_class = BudgetDebtSerializer

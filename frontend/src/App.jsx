@@ -5,9 +5,10 @@ import DateSelector from './DateSelector'
 import RoutineChecklist from './RoutineChecklist'
 import ProgressCard from './ProgressCard'
 import AddRoutineModal from './AddRoutineModal'
-import { Plus, ListTodo, Wallet, Plane } from 'lucide-react'
 import FinancesScreen from './FinancesScreen'
 import TravelScreen from './TravelScreen'
+import CalculatorScreen from './CalculatorScreen'
+import { Plus, ListTodo, Wallet, Plane, Calculator } from 'lucide-react'
 
 const LOCAL_HOSTS = new Set(['localhost', '127.0.0.1', '::1']);
 const isPrivateIpv4 = /^10\.|^192\.168\.|^172\.(1[6-9]|2\d|3[0-1])\./.test(window.location.hostname);
@@ -48,13 +49,15 @@ function sortRoutines(routines) {
 const HASH_BY_TAB = {
   routines: '#/rotinas',
   finances: '#/financas',
-  travel: '#/viagem'
+  travel: '#/viagem',
+  calculator: '#/calculadora'
 };
 
 function getTabFromHash(hash) {
   const cleanHash = (hash || '').toLowerCase();
   if (cleanHash === '#/financas') return 'finances';
   if (cleanHash === '#/viagem') return 'travel';
+  if (cleanHash === '#/calculadora') return 'calculator';
   return 'routines';
 }
 
@@ -446,7 +449,9 @@ function App() {
           ? { background: 'linear-gradient(180deg, #eff6ff 0%, #f8fafc 100%)', minHeight: '100vh' }
           : activeTab === 'travel'
             ? { background: 'linear-gradient(180deg, #fff7ed 0%, #f8fafc 100%)', minHeight: '100vh' }
-            : {}
+            : activeTab === 'calculator'
+              ? { background: 'linear-gradient(180deg, #f5f3ff 0%, #f8fafc 100%)', minHeight: '100vh' }
+              : {}
       }
     >
       <div style={{ display: activeTab === 'routines' ? 'block' : 'none' }}>
@@ -496,6 +501,10 @@ function App() {
         <TravelScreen API_URL={API_URL} />
       </div>
 
+      <div style={{ display: activeTab === 'calculator' ? 'block' : 'none' }}>
+        <CalculatorScreen API_URL={API_URL} />
+      </div>
+
       {/* BOTTOM NAV */}
       <nav className="bottom-nav">
         <button 
@@ -524,6 +533,15 @@ function App() {
             <Plane size={24} />
           </div>
           <span>Viagem</span>
+        </button>
+        <button 
+          className={`nav-item ${activeTab === 'calculator' ? 'active' : ''}`}
+          onClick={() => handleTabChange('calculator')}
+        >
+          <div className="nav-icon-container">
+            <Calculator size={24} />
+          </div>
+          <span>Calculadora</span>
         </button>
       </nav>
 

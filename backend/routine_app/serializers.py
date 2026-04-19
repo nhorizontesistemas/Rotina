@@ -1,5 +1,5 @@
 from rest_framework import serializers
-from .models import Hydration, Routine, RoutineLog, Transaction, TravelPlan, TravelComboItem, TravelItineraryItem, TravelAccommodationItem
+from .models import Hydration, Routine, RoutineLog, Transaction, TravelPlan, TravelComboItem, TravelItineraryItem, TravelAccommodationItem, BudgetCalculator, BudgetDebt
 
 class HydrationSerializer(serializers.ModelSerializer):
     class Meta:
@@ -52,4 +52,17 @@ class TravelPlanSerializer(serializers.ModelSerializer):
 
     class Meta:
         model = TravelPlan
+        fields = '__all__'
+
+
+class BudgetDebtSerializer(serializers.ModelSerializer):
+    class Meta:
+        model = BudgetDebt
+        fields = '__all__'
+
+class BudgetCalculatorSerializer(serializers.ModelSerializer):
+    debts = BudgetDebtSerializer(many=True, read_only=True)
+
+    class Meta:
+        model = BudgetCalculator
         fields = '__all__'
