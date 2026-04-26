@@ -1,5 +1,5 @@
 from rest_framework import serializers
-from .models import Hydration, Routine, RoutineLog, Transaction, TravelPlan, TravelComboItem, TravelItineraryItem, TravelAccommodationItem, BudgetCalculator, BudgetDebt
+from .models import Hydration, Routine, RoutineLog, Transaction, TravelPlan, TravelComboItem, TravelItineraryItem, TravelAccommodationItem, BudgetCalculator, BudgetDebt, DesafioItem
 
 class HydrationSerializer(serializers.ModelSerializer):
     class Meta:
@@ -65,4 +65,10 @@ class BudgetCalculatorSerializer(serializers.ModelSerializer):
 
     class Meta:
         model = BudgetCalculator
+        fields = '__all__'
+
+
+class DesafioItemSerializer(serializers.ModelSerializer):
+    class Meta:
+        model = DesafioItem
         fields = '__all__'

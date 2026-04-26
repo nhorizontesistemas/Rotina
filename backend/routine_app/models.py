@@ -188,3 +188,19 @@ class BudgetDebt(models.Model):
 
     def __str__(self):
         return f"{self.description} - {self.amount}"
+
+
+class DesafioItem(models.Model):
+    COLOR_CHOICES = [('green', 'Verde'), ('yellow', 'Amarelo'), ('red', 'Vermelho')]
+
+    number = models.IntegerField(unique=True)
+    notes = models.TextField(blank=True, default='')
+    is_marked = models.BooleanField(default=False)
+    color = models.CharField(max_length=10, choices=COLOR_CHOICES, default='green')
+    updated_at = models.DateTimeField(auto_now=True)
+
+    class Meta:
+        ordering = ['number']
+
+    def __str__(self):
+        return f"Desafio {self.number}"

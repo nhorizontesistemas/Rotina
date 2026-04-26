@@ -1,6 +1,6 @@
 from rest_framework import viewsets
-from .models import Hydration, Routine, RoutineLog, Transaction, MonthlyFinanceState, TravelPlan, TravelComboItem, TravelItineraryItem, TravelAccommodationItem, BudgetCalculator, BudgetDebt
-from .serializers import HydrationSerializer, RoutineSerializer, RoutineLogSerializer, TransactionSerializer, TravelPlanSerializer, TravelComboItemSerializer, TravelItineraryItemSerializer, TravelAccommodationItemSerializer, BudgetCalculatorSerializer, BudgetDebtSerializer
+from .models import Hydration, Routine, RoutineLog, Transaction, MonthlyFinanceState, TravelPlan, TravelComboItem, TravelItineraryItem, TravelAccommodationItem, BudgetCalculator, BudgetDebt, DesafioItem
+from .serializers import HydrationSerializer, RoutineSerializer, RoutineLogSerializer, TransactionSerializer, TravelPlanSerializer, TravelComboItemSerializer, TravelItineraryItemSerializer, TravelAccommodationItemSerializer, BudgetCalculatorSerializer, BudgetDebtSerializer, DesafioItemSerializer
 from rest_framework.decorators import action
 from rest_framework.response import Response
 from datetime import date, timedelta
@@ -134,3 +134,15 @@ class BudgetCalculatorViewSet(viewsets.ModelViewSet):
 class BudgetDebtViewSet(viewsets.ModelViewSet):
     queryset = BudgetDebt.objects.all()
     serializer_class = BudgetDebtSerializer
+
+
+class DesafioItemViewSet(viewsets.ModelViewSet):
+    queryset = DesafioItem.objects.all()
+    serializer_class = DesafioItemSerializer
+
+    def list(self, request, *args, **kwargs):
+        existing = set(DesafioItem.objects.values_list('number', flat=True))
+        missing = [i for i in range(1, 31) if i not in existing]
+        if missing:
+            DesafioItem.objects.bulk_create([DesafioItem(number=i) for i in missing])
+        return super().list(request, *args, **kwargs)

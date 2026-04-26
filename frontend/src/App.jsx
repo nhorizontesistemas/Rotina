@@ -8,7 +8,8 @@ import AddRoutineModal from './AddRoutineModal'
 import FinancesScreen from './FinancesScreen'
 import TravelScreen from './TravelScreen'
 import CalculatorScreen from './CalculatorScreen'
-import { Plus, ListTodo, Wallet, Plane, Calculator } from 'lucide-react'
+import DesafioScreen from './DesafioScreen'
+import { Plus, ListTodo, Wallet, Plane, Calculator, Trophy } from 'lucide-react'
 
 const LOCAL_HOSTS = new Set(['localhost', '127.0.0.1', '::1']);
 const isPrivateIpv4 = /^10\.|^192\.168\.|^172\.(1[6-9]|2\d|3[0-1])\./.test(window.location.hostname);
@@ -50,7 +51,8 @@ const HASH_BY_TAB = {
   routines: '#/rotinas',
   finances: '#/financas',
   travel: '#/viagem',
-  calculator: '#/calculadora'
+  calculator: '#/calculadora',
+  desafio: '#/desafio'
 };
 
 function getTabFromHash(hash) {
@@ -58,6 +60,7 @@ function getTabFromHash(hash) {
   if (cleanHash === '#/financas') return 'finances';
   if (cleanHash === '#/viagem') return 'travel';
   if (cleanHash === '#/calculadora') return 'calculator';
+  if (cleanHash === '#/desafio') return 'desafio';
   return 'routines';
 }
 
@@ -505,6 +508,10 @@ function App() {
         <CalculatorScreen API_URL={API_URL} />
       </div>
 
+      <div style={{ display: activeTab === 'desafio' ? 'block' : 'none' }}>
+        <DesafioScreen API_URL={API_URL} />
+      </div>
+
       {/* BOTTOM NAV */}
       <nav className="bottom-nav">
         <button 
@@ -534,7 +541,7 @@ function App() {
           </div>
           <span>Viagem</span>
         </button>
-        <button 
+        <button
           className={`nav-item ${activeTab === 'calculator' ? 'active' : ''}`}
           onClick={() => handleTabChange('calculator')}
         >
@@ -542,6 +549,15 @@ function App() {
             <Calculator size={24} />
           </div>
           <span>Calculadora</span>
+        </button>
+        <button
+          className={`nav-item ${activeTab === 'desafio' ? 'active' : ''}`}
+          onClick={() => handleTabChange('desafio')}
+        >
+          <div className="nav-icon-container">
+            <Trophy size={24} />
+          </div>
+          <span>Desafio</span>
         </button>
       </nav>
 
