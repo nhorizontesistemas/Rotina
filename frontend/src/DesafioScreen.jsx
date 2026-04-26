@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { X, Save, CheckCircle, Circle } from 'lucide-react';
+import { X, Save, CheckCircle, Circle, RotateCcw } from 'lucide-react';
 
 const COLOR_OPTIONS = [
   { key: 'green',  label: 'Verde',    bg: 'linear-gradient(135deg, #10b981 0%, #059669 100%)', shadow: 'rgba(16,185,129,0.4)',  border: '#6ee7b7', solid: '#10b981' },
@@ -75,6 +75,14 @@ export default function DesafioScreen({ API_URL }) {
     }
   };
 
+  const handleResetAll = async () => {
+    if (!window.confirm('Zerar tudo? Notas, cores e checks serão apagados.')) return;
+    const res = await fetch(`${API_URL}/desafio/reset_all/`, { method: 'POST' });
+    if (res.ok) {
+      setItems(prev => prev.map(it => ({ ...it, notes: '', is_marked: false, color: 'green' })));
+    }
+  };
+
   const markedCount = items.filter(i => i.is_marked).length;
 
   if (loading) return <div style={{ padding: '40px', textAlign: 'center', color: '#6b7280' }}>Carregando...</div>;
@@ -138,6 +146,18 @@ export default function DesafioScreen({ API_URL }) {
       <p style={{ textAlign: 'center', fontSize: '11px', color: '#9ca3af', marginTop: '16px' }}>
         Ponto amarelo = tem anotação · Colorido = marcado
       </p>
+
+      <button
+        onClick={handleResetAll}
+        style={{
+          display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '8px',
+          margin: '16px auto 0 auto', padding: '12px 24px', borderRadius: '14px',
+          border: '1px solid #fca5a5', background: '#fef2f2', color: '#dc2626',
+          fontWeight: '700', fontSize: '14px', cursor: 'pointer',
+        }}
+      >
+        <RotateCcw size={16} /> Zerar Tudo
+      </button>
 
       {/* Modal */}
       {selected && (

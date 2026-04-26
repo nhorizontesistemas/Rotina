@@ -1,4 +1,4 @@
-from rest_framework import viewsets
+from rest_framework import viewsets, status
 from .models import Hydration, Routine, RoutineLog, Transaction, MonthlyFinanceState, TravelPlan, TravelComboItem, TravelItineraryItem, TravelAccommodationItem, BudgetCalculator, BudgetDebt, DesafioItem
 from .serializers import HydrationSerializer, RoutineSerializer, RoutineLogSerializer, TransactionSerializer, TravelPlanSerializer, TravelComboItemSerializer, TravelItineraryItemSerializer, TravelAccommodationItemSerializer, BudgetCalculatorSerializer, BudgetDebtSerializer, DesafioItemSerializer
 from rest_framework.decorators import action
@@ -146,3 +146,8 @@ class DesafioItemViewSet(viewsets.ModelViewSet):
         if missing:
             DesafioItem.objects.bulk_create([DesafioItem(number=i) for i in missing])
         return super().list(request, *args, **kwargs)
+
+    @action(detail=False, methods=['post'])
+    def reset_all(self, request):
+        DesafioItem.objects.all().update(notes='', is_marked=False, color='green')
+        return Response({'status': 'ok'}, status=status.HTTP_200_OK)
