@@ -1,6 +1,6 @@
 # Rotina Diárias — System Overview
 
-Personal management web app. 4 main modules: rotinas, finanças, viagem, calculadora.
+Personal management web app. 5 módulos: rotinas, finanças, viagem, calculadora, desafio.
 
 ## Stack
 
@@ -59,6 +59,13 @@ cd frontend && npm install && npm run dev
 - `CalculatorScreen.jsx`
 - Models: `BudgetCalculator`, `BudgetDebt`
 
+### Desafio
+- Lista de 30 itens numerados (auto-criados no primeiro acesso)
+- Marca cada item com cor: verde / amarelo / vermelho
+- Adiciona notas por item, botão de reset geral
+- `DesafioScreen.jsx`
+- Model: `DesafioItem`
+
 ### Hidratação
 - Tracker de consumo de água (meta: 2000ml/dia)
 - `HydrationCard.jsx`
@@ -91,6 +98,7 @@ Rotina/
 | `travel-accommodation-items/` | CRUD |
 | `budget-calculators/` | CRUD |
 | `budget-debts/` | CRUD |
+| `desafio/` | CRUD + POST reset_all/ |
 
 ## Config
 

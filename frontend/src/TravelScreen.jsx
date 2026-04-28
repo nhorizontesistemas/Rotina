@@ -1,5 +1,5 @@
 import React, { useEffect, useRef, useState } from 'react';
-import { Plus, Plane, BedDouble, Trash2, Edit2, Route, Ticket, Fuel, CheckSquare, Square } from 'lucide-react';
+import { Plus, Plane, BedDouble, Trash2, Edit2, Route, Ticket, Fuel, CheckSquare, Square, GripVertical } from 'lucide-react';
 
 const transportLabels = {
   CAR: 'Carro',
@@ -128,6 +128,10 @@ function sortByDateTime(items) {
     const aDate = a.event_date || '9999-12-31';
     const bDate = b.event_date || '9999-12-31';
     if (aDate !== bDate) return aDate.localeCompare(bDate);
+
+    const aOrder = a.order || 0;
+    const bOrder = b.order || 0;
+    if (aOrder !== bOrder) return aOrder - bOrder;
 
     const aTime = a.event_time || '23:59:59';
     const bTime = b.event_time || '23:59:59';
@@ -314,6 +318,9 @@ export default function TravelScreen({ API_URL }) {
   const [trips, setTrips] = useState([]);
   const [activeTripId, setActiveTripId] = useState(null);
   const [expandedTripId, setExpandedTripId] = useState(null);
+  const [dragItemId, setDragItemId] = useState(null);
+  const [dragOverItemId, setDragOverItemId] = useState(null);
+  const dragStateRef = useRef({ itemId: null, overItemId: null, tripId: null });
   const [tripDraft, setTripDraft] = useState(buildTripDraft());
   const [editingTripId, setEditingTripId] = useState(null);
   const [itineraryDraft, setItineraryDraft] = useState([buildItineraryDraft()]);
@@ -624,7 +631,8 @@ export default function TravelScreen({ API_URL }) {
       const savedItems = [];
       const sharedDate = itemsToSave[0].event_date || null;
 
-      for (const itemDraft of itemsToSave) {
+      for (let i = 0; i < itemsToSave.length; i++) {
+        const itemDraft = itemsToSave[i];
         const payload = {
           ...itemDraft,
           travel_plan: activeTrip.id,
@@ -633,7 +641,8 @@ export default function TravelScreen({ API_URL }) {
           event_time: null,
           expected_value: 0,
           real_value: 0,
-          notes: null
+          notes: null,
+          order: isEditing ? (itemDraft.order || 0) : (activeTrip.itinerary_items?.length || 0) + i
         };
 
         const url = isEditing
@@ -757,7 +766,8 @@ export default function TravelScreen({ API_URL }) {
       expected_value: Number(accommodationDraft.expected_value || 0),
       real_value: Number(accommodationDraft.real_value || 0),
       accommodation_total: Number(accommodationDraft.real_value || 0),
-      notes: accommodationDraft.notes || null
+      notes: accommodationDraft.notes || null,
+      order: isEditing ? (accommodationDraft.order || 0) : (activeTrip.accommodation_items?.length || 0)
     };
 
     const isEditing = Boolean(editingAccommodationId);
@@ -841,6 +851,99 @@ export default function TravelScreen({ API_URL }) {
       setTrips(previousTrips);
       fetchTrips();
     }
+  };
+
+  const reorderItinerary = async () => {
+    const { itemId, overItemId, tripId } = dragStateRef.current;
+    if (!itemId || !overItemId || itemId === overItemId || !tripId) return;
+
+    const trip = trips.find(t => t.id === tripId);
+    if (!trip) return;
+
+    const items = sortByDateTime([...(trip.itinerary_items || [])]);
+    const fromIdx = items.findIndex((i) => i.id === itemId);
+    const toIdx = items.findIndex((i) => i.id === overItemId);
+    if (fromIdx === -1 || toIdx === -1) return;
+
+    const [moved] = items.splice(fromIdx, 1);
+    items.splice(toIdx, 0, moved);
+
+    // Atribui nova ordem sequencial para todos os itens
+    const reorderedItems = items.map((item, index) => ({ ...item, order: index }));
+
+    // Atualiza estado local imediatamente para feedback visual
+    setTrips((prev) => prev.map((t) => (t.id === tripId ? { ...t, itinerary_items: reorderedItems } : t)));
+
+    // Persiste no backend de forma assíncrona
+    try {
+      await Promise.all(
+        reorderedItems.map((item) =>
+          fetch(`${API_URL}/travel-itinerary-items/${item.id}/`, {
+            method: 'PATCH',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ order: item.order })
+          })
+        )
+      );
+    } catch (error) {
+      console.error('Erro ao salvar nova ordem:', error);
+      fetchTrips(); // Recarrega se der erro
+    }
+  };
+
+  const clearDragState = () => {
+    setDragItemId(null);
+    setDragOverItemId(null);
+    dragStateRef.current = { itemId: null, overItemId: null, tripId: null };
+  };
+
+  const handleItineraryDragStart = (itemId, tripId) => {
+    dragStateRef.current.itemId = itemId;
+    dragStateRef.current.tripId = tripId;
+    setDragItemId(itemId);
+  };
+
+  const handleItineraryDragOver = (e, itemId) => {
+    e.preventDefault();
+    dragStateRef.current.overItemId = itemId;
+    setDragOverItemId(itemId);
+  };
+
+  const handleItineraryDrop = (e) => {
+    e.preventDefault();
+    reorderItinerary();
+    clearDragState();
+  };
+
+  const handleItineraryDragEnd = () => clearDragState();
+
+  const handleGripPointerDown = (e, itemId, tripId) => {
+    e.preventDefault();
+    e.currentTarget.setPointerCapture(e.pointerId);
+    dragStateRef.current = { itemId, overItemId: null, tripId };
+    setDragItemId(itemId);
+  };
+
+  const handleGripPointerMove = (e) => {
+    if (!dragStateRef.current.itemId) return;
+    const els = document.querySelectorAll('[data-drag-item]');
+    for (const el of els) {
+      const r = el.getBoundingClientRect();
+      if (e.clientY >= r.top && e.clientY <= r.bottom) {
+        const overId = parseInt(el.getAttribute('data-drag-item'), 10);
+        if (overId !== dragStateRef.current.overItemId) {
+          dragStateRef.current.overItemId = overId;
+          setDragOverItemId(overId);
+        }
+        break;
+      }
+    }
+  };
+
+  const handleGripPointerUp = () => {
+    if (!dragStateRef.current.itemId) return;
+    reorderItinerary();
+    clearDragState();
   };
 
   return (
@@ -1179,15 +1282,35 @@ export default function TravelScreen({ API_URL }) {
                         ) : (
                           <div style={styles.listColumn}>
                             {itineraryByDate.map((group) => (
-                              <div key={`it-${trip.id}-${group.date}`} style={styles.groupCard}>
+                              <div key={`it-${trip.id}-${group.date}`} style={styles.groupCard} data-drag-trip={trip.id}>
                                 <div style={styles.groupTitleRow}>
                                   <strong style={styles.groupTitle}>{group.displayDate}</strong>
                                   <span style={styles.groupCount}>{group.rows.length} item{group.rows.length > 1 ? 's' : ''}</span>
                                 </div>
                                 {group.rows.map((item) => (
-                                  <div key={item.id} style={styles.itemRowCard}>
+                                  <div
+                                    key={item.id}
+                                    data-drag-item={item.id}
+                                    style={{
+                                      ...styles.itemRowCard,
+                                      opacity: dragItemId === item.id ? 0.4 : 1,
+                                      borderTop: dragOverItemId === item.id && dragItemId !== item.id ? '2px solid #0f766e' : undefined,
+                                    }}
+                                    onDragOver={(e) => handleItineraryDragOver(e, item.id)}
+                                    onDrop={handleItineraryDrop}
+                                    onDragEnd={handleItineraryDragEnd}
+                                  >
                                     <div style={styles.itemTopRow}>
                                       <div style={styles.itemTopLeft}>
+                                        <span
+                                          style={{ display: 'flex', alignItems: 'center', touchAction: 'none', cursor: 'grab', flexShrink: 0, marginRight: '4px', userSelect: 'none' }}
+                                          onPointerDown={(e) => handleGripPointerDown(e, item.id, trip.id)}
+                                          onPointerMove={handleGripPointerMove}
+                                          onPointerUp={handleGripPointerUp}
+                                          onPointerCancel={handleGripPointerUp}
+                                        >
+                                          <GripVertical size={18} style={{ color: '#94a3b8', pointerEvents: 'none' }} />
+                                        </span>
                                         <button
                                           type="button"
                                           onClick={() => handleToggleItineraryCompleted(item.id, trip.id, item.is_completed)}

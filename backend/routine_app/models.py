@@ -23,9 +23,11 @@ class RoutineLog(models.Model):
     date = models.DateField()
     completed = models.BooleanField(default=False)
     notes = models.TextField(null=True, blank=True)
+    order = models.IntegerField(default=0)
 
     class Meta:
         unique_together = ('routine', 'date')
+        ordering = ['order']
 
     def __str__(self):
         return f"{self.routine.name} on {self.date}: {self.completed}"
@@ -137,11 +139,12 @@ class TravelItineraryItem(models.Model):
     expected_value = models.DecimalField(max_digits=10, decimal_places=2, default=0)
     real_value = models.DecimalField(max_digits=10, decimal_places=2, default=0)
     notes = models.TextField(null=True, blank=True)
+    order = models.IntegerField(default=0)
     created_at = models.DateTimeField(auto_now_add=True)
     updated_at = models.DateTimeField(auto_now=True)
 
     class Meta:
-        ordering = ['-id']
+        ordering = ['event_date', 'order', 'id']
 
     def __str__(self):
         return f"{self.description} - {self.item_type}"
@@ -162,11 +165,12 @@ class TravelAccommodationItem(models.Model):
     expected_value = models.DecimalField(max_digits=10, decimal_places=2, default=0)
     real_value = models.DecimalField(max_digits=10, decimal_places=2, default=0)
     notes = models.TextField(null=True, blank=True)
+    order = models.IntegerField(default=0)
     created_at = models.DateTimeField(auto_now_add=True)
     updated_at = models.DateTimeField(auto_now=True)
 
     class Meta:
-        ordering = ['-id']
+        ordering = ['entry_date', 'order', 'id']
 
     def __str__(self):
         return f"{self.accommodation_name} - {self.accommodation_type}"

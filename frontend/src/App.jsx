@@ -33,7 +33,15 @@ function timeToMinutes(time) {
   return (hours * 60) + minutes;
 }
 
+function hasCustomOrder(routines) {
+  return routines.some(r => r.order !== 0 && r.order !== undefined && r.order !== null);
+}
+
 function sortRoutines(routines) {
+  if (hasCustomOrder(routines)) {
+    return [...routines].sort((a, b) => (a.order || 0) - (b.order || 0));
+  }
+
   return [...routines].sort((a, b) => {
     const aMinutes = timeToMinutes(a.time);
     const bMinutes = timeToMinutes(b.time);
@@ -266,6 +274,25 @@ function App() {
     }
   };
 
+  const handleReorderRoutines = async (reorderedRoutines) => {
+    setDailyRoutines(reorderedRoutines);
+
+    for (let i = 0; i < reorderedRoutines.length; i++) {
+      const routine = reorderedRoutines[i];
+      const response = await fetch(`${API_URL}/logs/${routine.log_id}/`, {
+        method: 'PATCH',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ order: i })
+      });
+
+      if (!response.ok) {
+        console.error(`Erro ao atualizar ordem para rotina ${routine.id}`);
+        fetchDayData();
+        return;
+      }
+    }
+  };
+
   const handleEditRoutine = async (id) => {
     const r = dailyRoutines.find(x => x.id === id);
     if (!r) return;
@@ -476,12 +503,13 @@ function App() {
                 <Plus size={16} /> <span>📝 Novo</span>
               </button>
             </div>
-            <RoutineChecklist 
-              routines={dailyRoutines} 
-              onToggle={handleToggleRoutine} 
+            <RoutineChecklist
+              routines={dailyRoutines}
+              onToggle={handleToggleRoutine}
               onDelete={handleDeleteRoutine}
               onEdit={handleEditRoutine}
               onUpdateNotes={handleUpdateRoutineNotes}
+              onReorder={handleReorderRoutines}
             />
           </div>
 
