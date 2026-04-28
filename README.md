@@ -1,109 +1,82 @@
-# Rotina Diárias — System Overview
+# Sistema de Gestão de Rotina e Planejamento Personalizado
 
-Personal management web app. 5 módulos: rotinas, finanças, viagem, calculadora, desafio.
+Este sistema é uma aplicação completa para gestão de hábitos diários, finanças pessoais, planejamento de viagens e acompanhamento de desafios. Foi projetado com uma arquitetura moderna separando Frontend (React) e Backend (Django).
 
-## Stack
+## 🚀 Arquitetura e Tech Stack
 
-**Frontend:** React 18 + Vite 5 — `frontend/src/`
-**Backend:** Django 4 + Django REST Framework — `backend/routine_app/`
-**Database:** PostgreSQL via Supabase (sa-east-1)
-**Container:** Docker Compose (recommended way to run)
-**Language/TZ:** pt-BR, America/São_Paulo
+- **Frontend:** React.js + Vite. Utiliza CSS Vanilla para estilização premium e Lucide-React para iconografia.
+- **Backend:** Django (Python) com Django REST Framework (DRF) para APIs.
+- **Banco de Dados:** SQLite (padrão) com suporte a migrações Django.
+- **Containerização:** Docker e Docker Compose para orquestração de serviços.
 
-## Run
+---
 
-```bash
-docker-compose up
-# frontend → http://localhost:5173
-# backend API → http://localhost:8001/api
+## 🛠️ Módulos do Sistema
+
+### 1. Rotinas e Hidratação (`/rotinas`)
+- **Checklist Diário:** Permite criar rotinas no catálogo e registrá-las diariamente.
+- **Ordenação Customizada:** Suporta arrastar e soltar (drag-and-drop) para definir a ordem das tarefas, persistida via campo `order` no `RoutineLog`.
+- **Hidratação:** Controle de consumo de água com meta diária configurável.
+- **Progresso:** Card visual que mostra a porcentagem de conclusão das tarefas do dia.
+
+### 2. Finanças (`/financas`)
+- **Transações:** Registro de Ganhos, Gastos Fixos e Gastos Diários.
+- **Fluxo Mensal:** O sistema organiza as finanças por mês/ano, permitindo navegação no histórico.
+- **Resumo:** Cálculo automático de saldo, total de gastos e economia prevista.
+
+### 3. Planejador de Viagem (`/viagem`) - *Módulo Avançado*
+- **Cálculo de Rota:** Integração com APIs de geocodificação e roteamento (Nominatim/OSRM) para calcular distância e custo de combustível.
+- **Gestão de Custos:** Soma automática de pedágios, combustível, acomodações e itens do roteiro.
+- **Roteiro e Acomodações:** 
+  - Suporta múltiplos itens por dia.
+  - **Ordenação Manual:** Implementação de drag-and-drop que persiste no banco de dados através do campo `order`.
+  - Diferenciação visual entre itens concluídos e pendentes.
+
+### 4. Calculadora de Orçamento (`/calculadora`)
+- Ferramenta para simulação de dívidas e distribuição de orçamento total.
+
+### 5. Desafio (`/desafio`)
+- Grid interativo para acompanhamento de metas de longo prazo (ex: 100 dias), com sistema de cores (Verde, Amarelo, Vermelho) e notas por item.
+
+---
+
+## 📂 Estrutura de Pastas
+
+```text
+/
+├── frontend/             # Código React (Vite)
+│   ├── src/
+│   │   ├── App.jsx       # Componente principal e roteamento por Hash
+│   │   ├── TravelScreen.jsx # Lógica complexa de viagens e ordenação
+│   │   └── ...           # Componentes modulares (Finances, Routine, etc)
+├── backend/              # Código Django (Python)
+│   ├── routine_app/      # App principal com Models e Views
+│   │   ├── models.py     # Definição do banco de dados (crucial para entender o sistema)
+│   │   └── views.py      # Endpoints da API
+└── docker-compose.yml    # Configuração para rodar todo o sistema
 ```
 
-Manual:
-```bash
-# backend
-cd backend && pip install -r requirements.txt
-python manage.py migrate && python manage.py runserver
+---
 
-# frontend
-cd frontend && npm install && npm run dev
-```
+## 📋 Informações para a próxima IA / Desenvolvedor
 
-## Modules
+### Regras de Ordenação (Drag-and-Drop)
+- O sistema utiliza uma lógica de `order` nos modelos `RoutineLog`, `TravelItineraryItem` e `TravelAccommodationItem`.
+- No Frontend, a função `sortByDateTime` no arquivo `TravelScreen.jsx` é a responsável por garantir que a ordem visual corresponda aos dados. Ela prioriza `Data` -> `Ordem Manual` -> `Hora`.
+- Sempre que houver um reordenamento na interface, o Frontend dispara múltiplos `PATCH` para atualizar o campo `order` no banco de dados.
 
-### Rotinas
-- Checklist diário de tarefas com nome, horário, ícone, cor
-- Marca conclusão, adiciona nota, navega por data
-- `RoutineChecklist.jsx`, `AddRoutineModal.jsx`
-- Models: `Routine`, `RoutineLog`
+### Comunicação com API
+- A URL da API é detectada automaticamente entre `localhost` (ambiente dev) e o host de produção.
+- O sistema utiliza `fetch` padrão para operações CRUD.
 
-### Finanças
-- Categorias: EARNING, FIXED_EXPENSE, DAILY_EXPENSE
-- Visão mensal, navegação por data
-- Auto-replica gastos fixos do mês anterior para mês novo
-- Catálogo de transações recorrentes
-- `FinancesScreen.jsx`
-- Models: `Transaction`, `MonthlyFinanceState`
+### Ambiente de Desenvolvimento
+- Para rodar o sistema completo: `docker-compose up --build`
+- Backend roda na porta `8001`.
+- Frontend roda na porta `5173`.
 
-### Viagem
-- Planos de viagem: destino, datas, transporte (carro/ônibus/avião/van/outro), distância
-- Custos: pedágio, combustível, hospedagem
-- Roteiro dia a dia: refeições, atrações, compras — com custo previsto vs. real
-- Hospedagem com check-in/check-out por tipo (hotel, chácara, apartamento, pousada, hostel, casa)
-- Combo de atividades pré-planejadas
-- `TravelScreen.jsx` (arquivo maior do projeto, ~86KB)
-- Models: `TravelPlan`, `TravelComboItem`, `TravelItineraryItem`, `TravelAccommodationItem`
+---
 
-### Calculadora
-- Projetos de orçamento com valor total
-- Rastreia dívidas/gastos dentro de cada orçamento
-- `CalculatorScreen.jsx`
-- Models: `BudgetCalculator`, `BudgetDebt`
-
-### Desafio
-- Lista de 30 itens numerados (auto-criados no primeiro acesso)
-- Marca cada item com cor: verde / amarelo / vermelho
-- Adiciona notas por item, botão de reset geral
-- `DesafioScreen.jsx`
-- Model: `DesafioItem`
-
-### Hidratação
-- Tracker de consumo de água (meta: 2000ml/dia)
-- `HydrationCard.jsx`
-- Model: `Hydration`
-
-## Estrutura de Pastas
-
-```
-Rotina/
-├── backend/
-│   ├── core/              # settings.py, urls.py
-│   └── routine_app/       # models.py, views.py, serializers.py, urls.py, migrations/
-├── frontend/
-│   └── src/               # App.jsx (roteamento de abas), *.jsx (telas e componentes)
-├── docker-compose.yml
-└── vercel.json            # deploy
-```
-
-## API (base: /api/)
-
-| Resource | Endpoints notáveis |
-|---|---|
-| `hydration/` | GET today/?date= |
-| `routines/` | CRUD |
-| `logs/` | daily/?date= |
-| `transactions/` | by_date/?date=, by_month/?date= |
-| `travel-plans/` | CRUD |
-| `travel-combo-items/` | CRUD |
-| `travel-itinerary-items/` | CRUD |
-| `travel-accommodation-items/` | CRUD |
-| `budget-calculators/` | CRUD |
-| `budget-debts/` | CRUD |
-| `desafio/` | CRUD + POST reset_all/ |
-
-## Config
-
-- `backend/.env` — DATABASE_URL (Supabase)
-- `frontend/.env.development` — `VITE_API_URL=http://localhost:8001/api`
-- Frontend auto-detecta ambiente (localhost / IP privado / produção) para URL da API
-- CORS aberto no backend (desenvolvimento)
-- Docker Compose roda migrations automaticamente no startup
+## 📝 Notas de Versão Recentes
+- Implementada a persistência de ordem no módulo de Viagens.
+- Corrigida a lógica de sincronização entre o estado visual do React e o banco de dados Django durante o arrasto de itens.
+- Adicionado suporte a metas de consumo de água persistentes por data.
