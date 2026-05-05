@@ -2,7 +2,7 @@ from django.db import models
 
 class Hydration(models.Model):
     date = models.DateField(unique=True)
-    goal = models.IntegerField(default=2000) # ml
+    goal = models.IntegerField(default=3000) # ml
     consumed = models.IntegerField(default=0) # ml
 
     def __str__(self):

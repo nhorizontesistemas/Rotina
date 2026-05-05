@@ -77,7 +77,7 @@ function App() {
   const [isModalOpen, setIsModalOpen] = useState(false);
   
   const [routineCatalog, setRoutineCatalog] = useState([]);
-  const [hydration, setHydration] = useState({ id: null, consumed: 0, goal: 2000 });
+  const [hydration, setHydration] = useState({ id: null, consumed: 0, goal: 3000 });
   const [dailyRoutines, setDailyRoutines] = useState([]);
   
   const [newRoutineName, setNewRoutineName] = useState('');
