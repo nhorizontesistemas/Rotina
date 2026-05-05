@@ -496,7 +496,7 @@ function App() {
 
           <DateSelector date={currentDate} onPrev={handlePrevDay} onNext={handleNextDay} />
 
-          <div className="routines-section" style={{ background: 'rgba(255,255,255,0.4)', padding: '20px', borderRadius: '24px', border: '1px solid rgba(255,255,255,0.6)' }}>
+          <div className="routines-section" style={{ background: 'rgba(255,255,255,0.78)', padding: '20px', borderRadius: '24px', border: '2px dashed rgba(148,163,184,0.35)', boxShadow: 'inset 0 1px 0 rgba(255,255,255,0.7)' }}>
             <div className="section-title">
               <span>📅 Minhas Rotinas</span>
               <button className="add-btn" onClick={() => setIsModalOpen(true)} style={{ color: '#2563eb', display: 'flex', alignItems: 'center', gap: '4px' }}>

@@ -65,9 +65,19 @@ TEMPLATES = [
 
 WSGI_APPLICATION = 'core.wsgi.application'
 
-DATABASES = {
-    'default': env.db(),
-}
+USE_SQLITE = env.bool('DJANGO_USE_SQLITE', default=False)
+
+if USE_SQLITE:
+    DATABASES = {
+        'default': {
+            'ENGINE': 'django.db.backends.sqlite3',
+            'NAME': BASE_DIR / 'db.sqlite3',
+        }
+    }
+else:
+    DATABASES = {
+        'default': env.db(default=f"sqlite:///{BASE_DIR / 'db.sqlite3'}"),
+    }
 
 AUTH_PASSWORD_VALIDATORS = []
 

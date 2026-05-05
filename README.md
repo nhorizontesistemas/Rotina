@@ -1,82 +1,271 @@
-# Sistema de Gestão de Rotina e Planejamento Personalizado
+# Rotina - Gestao de Rotina, Financas e Planejamento
 
-Este sistema é uma aplicação completa para gestão de hábitos diários, finanças pessoais, planejamento de viagens e acompanhamento de desafios. Foi projetado com uma arquitetura moderna separando Frontend (React) e Backend (Django).
+Aplicacao full-stack para organizar rotina diaria, hidratacao, financas, viagem, calculadora de orcamento e desafio.
 
-## 🚀 Arquitetura e Tech Stack
+Arquitetura:
+- Frontend: React + Vite
+- Backend: Django + Django REST Framework
+- Banco: PostgreSQL (Supabase) ou SQLite (modo local)
+- Orquestracao: Docker Compose
 
-- **Frontend:** React.js + Vite. Utiliza CSS Vanilla para estilização premium e Lucide-React para iconografia.
-- **Backend:** Django (Python) com Django REST Framework (DRF) para APIs.
-- **Banco de Dados:** SQLite (padrão) com suporte a migrações Django.
-- **Containerização:** Docker e Docker Compose para orquestração de serviços.
+## Sumario
+- Visao geral
+- Funcionalidades
+- Arquitetura e stack
+- Estrutura do projeto
+- Pre-requisitos
+- Configuracao de ambiente
+- Como executar (Docker)
+- Como executar (sem Docker)
+- Rotas de navegacao (frontend)
+- API (backend)
+- Modelos principais
+- Deploy (Vercel)
+- Solucao de problemas
+- Proximos passos sugeridos
 
----
+## Visao geral
+O sistema foi desenhado para uso diario, com foco em produtividade pessoal:
+- acompanhar habitos e conclusao do dia
+- controlar consumo de agua
+- registrar ganhos e gastos por mes
+- planejar viagem com roteiro, acomodacao e custos
+- simular distribuicao de orcamento e dividas
+- acompanhar desafio com marcacoes e notas
 
-## 🛠️ Módulos do Sistema
+## Funcionalidades
+### 1. Rotinas e hidratacao
+- catalogo de rotinas
+- checklist diario por data
+- reorder por drag-and-drop com persistencia no campo order
+- notas por rotina do dia
+- meta de hidratacao por dia com controle de consumo
 
-### 1. Rotinas e Hidratação (`/rotinas`)
-- **Checklist Diário:** Permite criar rotinas no catálogo e registrá-las diariamente.
-- **Ordenação Customizada:** Suporta arrastar e soltar (drag-and-drop) para definir a ordem das tarefas, persistida via campo `order` no `RoutineLog`.
-- **Hidratação:** Controle de consumo de água com meta diária configurável.
-- **Progresso:** Card visual que mostra a porcentagem de conclusão das tarefas do dia.
+### 2. Financas
+- lancamentos por categoria: EARNING, FIXED_EXPENSE e DAILY_EXPENSE
+- visao mensal
+- replicacao automatica de gastos fixos do mes anterior para um novo mes
 
-### 2. Finanças (`/financas`)
-- **Transações:** Registro de Ganhos, Gastos Fixos e Gastos Diários.
-- **Fluxo Mensal:** O sistema organiza as finanças por mês/ano, permitindo navegação no histórico.
-- **Resumo:** Cálculo automático de saldo, total de gastos e economia prevista.
+### 3. Viagem
+- plano de viagem (destino, datas e custos)
+- itens de combo
+- itens de roteiro (com data/hora, ordem, status e valores)
+- itens de acomodacao (com check-in/check-out, ordem, status e valores)
 
-### 3. Planejador de Viagem (`/viagem`) - *Módulo Avançado*
-- **Cálculo de Rota:** Integração com APIs de geocodificação e roteamento (Nominatim/OSRM) para calcular distância e custo de combustível.
-- **Gestão de Custos:** Soma automática de pedágios, combustível, acomodações e itens do roteiro.
-- **Roteiro e Acomodações:** 
-  - Suporta múltiplos itens por dia.
-  - **Ordenação Manual:** Implementação de drag-and-drop que persiste no banco de dados através do campo `order`.
-  - Diferenciação visual entre itens concluídos e pendentes.
+### 4. Calculadora de orcamento
+- cadastro de orcamento total
+- cadastro de dividas vinculadas ao orcamento
 
-### 4. Calculadora de Orçamento (`/calculadora`)
-- Ferramenta para simulação de dívidas e distribuição de orçamento total.
+### 5. Desafio
+- geracao automatica de itens numerados
+- marcacao, notas e cor (green/yellow/red)
+- endpoint para reset geral
 
-### 5. Desafio (`/desafio`)
-- Grid interativo para acompanhamento de metas de longo prazo (ex: 100 dias), com sistema de cores (Verde, Amarelo, Vermelho) e notas por item.
+## Arquitetura e stack
+### Frontend
+- React 18
+- Vite 5
+- Lucide React
+- CSS (sem framework)
 
----
+### Backend
+- Django 4.2
+- Django REST Framework
+- django-cors-headers
+- django-environ
+- psycopg2-binary
 
-## 📂 Estrutura de Pastas
-
+## Estrutura do projeto
 ```text
-/
-├── frontend/             # Código React (Vite)
-│   ├── src/
-│   │   ├── App.jsx       # Componente principal e roteamento por Hash
-│   │   ├── TravelScreen.jsx # Lógica complexa de viagens e ordenação
-│   │   └── ...           # Componentes modulares (Finances, Routine, etc)
-├── backend/              # Código Django (Python)
-│   ├── routine_app/      # App principal com Models e Views
-│   │   ├── models.py     # Definição do banco de dados (crucial para entender o sistema)
-│   │   └── views.py      # Endpoints da API
-└── docker-compose.yml    # Configuração para rodar todo o sistema
+.
+|-- backend/
+|   |-- core/
+|   |   |-- settings.py
+|   |   |-- urls.py
+|   |-- routine_app/
+|   |   |-- models.py
+|   |   |-- serializers.py
+|   |   |-- urls.py
+|   |   |-- views.py
+|   |-- manage.py
+|   |-- requirements.txt
+|-- frontend/
+|   |-- public/
+|   |   |-- assets/
+|   |-- src/
+|   |   |-- App.jsx
+|   |   |-- RoutineChecklist.jsx
+|   |   |-- FinancesScreen.jsx
+|   |   |-- TravelScreen.jsx
+|   |   |-- CalculatorScreen.jsx
+|   |   |-- DesafioScreen.jsx
+|   |-- index.html
+|   |-- package.json
+|-- docker-compose.yml
+|-- vercel.json
+|-- README.md
 ```
 
----
+## Pre-requisitos
+Para Docker:
+- Docker
+- Docker Compose
 
-## 📋 Informações para a próxima IA / Desenvolvedor
+Para execucao local sem Docker:
+- Python 3.11+
+- Node.js 18+
+- npm
 
-### Regras de Ordenação (Drag-and-Drop)
-- O sistema utiliza uma lógica de `order` nos modelos `RoutineLog`, `TravelItineraryItem` e `TravelAccommodationItem`.
-- No Frontend, a função `sortByDateTime` no arquivo `TravelScreen.jsx` é a responsável por garantir que a ordem visual corresponda aos dados. Ela prioriza `Data` -> `Ordem Manual` -> `Hora`.
-- Sempre que houver um reordenamento na interface, o Frontend dispara múltiplos `PATCH` para atualizar o campo `order` no banco de dados.
+## Configuracao de ambiente
+### Backend (.env)
+Crie backend/.env com a variavel:
 
-### Comunicação com API
-- A URL da API é detectada automaticamente entre `localhost` (ambiente dev) e o host de produção.
-- O sistema utiliza `fetch` padrão para operações CRUD.
+```env
+DATABASE_URL=postgresql://usuario:senha@host:porta/database
+```
 
-### Ambiente de Desenvolvimento
-- Para rodar o sistema completo: `docker-compose up --build`
-- Backend roda na porta `8001`.
-- Frontend roda na porta `5173`.
+Observacoes:
+- o backend pode usar SQLite quando DJANGO_USE_SQLITE=1
+- quando DJANGO_USE_SQLITE nao estiver ativo, o backend usa DATABASE_URL
+- se DATABASE_URL nao existir, existe fallback para SQLite em settings
 
----
+### Frontend (.env opcional)
+No frontend, voce pode definir:
 
-## 📝 Notas de Versão Recentes
-- Implementada a persistência de ordem no módulo de Viagens.
-- Corrigida a lógica de sincronização entre o estado visual do React e o banco de dados Django durante o arrasto de itens.
-- Adicionado suporte a metas de consumo de água persistentes por data.
+```env
+VITE_API_URL=http://localhost:8001/api
+```
+
+Se nao definir VITE_API_URL, o frontend detecta automaticamente:
+- local: http://<host>:8001/api
+- producao (Vercel services): <origin>/_/backend/api
+
+## Como executar (Docker)
+Na raiz do projeto:
+
+```bash
+docker compose up --build
+```
+
+Servicos:
+- frontend: http://localhost:5173
+- backend: http://localhost:8001
+- API root: http://localhost:8001/api/
+
+Comandos uteis:
+
+```bash
+docker compose down
+docker compose logs -f backend
+docker compose logs -f frontend
+docker compose up -d --build --force-recreate backend
+```
+
+## Como executar (sem Docker)
+### Backend
+```bash
+cd backend
+python -m venv .venv
+
+# Windows
+.venv\Scripts\activate
+
+pip install -r requirements.txt
+python manage.py makemigrations routine_app
+python manage.py migrate
+python manage.py runserver 0.0.0.0:8000
+```
+
+### Frontend
+```bash
+cd frontend
+npm install
+npm run dev -- --host
+```
+
+## Rotas de navegacao (frontend)
+Navegacao via hash em App.jsx:
+- #/rotinas
+- #/financas
+- #/viagem
+- #/calculadora
+- #/desafio
+
+## API (backend)
+Base URL:
+- /api/
+
+Recursos DRF (router):
+- /api/hydration/
+- /api/routines/
+- /api/logs/
+- /api/transactions/
+- /api/travel-plans/
+- /api/travel-combo-items/
+- /api/travel-itinerary-items/
+- /api/travel-accommodation-items/
+- /api/budget-calculators/
+- /api/budget-debts/
+- /api/desafio/
+
+Acoes customizadas:
+- GET /api/hydration/today/?date=YYYY-MM-DD
+- GET /api/logs/daily/?date=YYYY-MM-DD
+- GET /api/transactions/by_date/?date=YYYY-MM-DD
+- GET /api/transactions/by_month/?date=YYYY-MM-DD
+- POST /api/desafio/reset_all/
+
+Exemplos rapidos:
+
+```bash
+# hidracao do dia
+curl "http://localhost:8001/api/hydration/today/?date=2026-05-04"
+
+# logs diarios
+curl "http://localhost:8001/api/logs/daily/?date=2026-05-04"
+```
+
+## Modelos principais
+- Hydration: controle diario de meta e consumo
+- Routine: catalogo de habitos
+- RoutineLog: estado da rotina por dia (completed, notes, order)
+- Transaction: lancamentos financeiros
+- MonthlyFinanceState: controle de inicializacao mensal para replicacao
+- TravelPlan, TravelComboItem, TravelItineraryItem, TravelAccommodationItem
+- BudgetCalculator e BudgetDebt
+- DesafioItem
+
+## Deploy (Vercel)
+Existe configuracao em vercel.json com experimentalServices:
+- frontend em /
+- backend em /_/backend
+
+No frontend, a API em producao e resolvida para:
+- <origin>/_/backend/api
+
+## Solucao de problemas
+### 1. Backend nao conecta no Supabase
+Checklist:
+- validar DATABASE_URL em backend/.env
+- testar conectividade da porta (ex.: 6543)
+- evitar fixar extra_hosts com IP antigo no docker-compose.yml
+- recriar o backend apos alteracoes:
+
+```bash
+docker compose up -d --build --force-recreate backend
+```
+
+### 2. Frontend sem dados
+- confirmar API em http://localhost:8001/api/
+- validar VITE_API_URL se definido
+- verificar logs do backend
+
+### 3. Favicon da aba
+Configurado em frontend/index.html para:
+- /assets/routine_sticker.png
+
+## Proximos passos sugeridos
+- adicionar autenticacao e permissao por usuario
+- adicionar testes automatizados (backend e frontend)
+- adicionar CI para lint, build e testes
+- separar configuracoes de desenvolvimento e producao

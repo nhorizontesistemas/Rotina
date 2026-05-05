@@ -8,11 +8,6 @@ services:
       - "8001:8000"
     volumes:
       - ./backend:/app
-    dns:
-      - 1.1.1.1
-      - 8.8.8.8
-    extra_hosts:
-      - "aws-1-sa-east-1.pooler.supabase.com:18.228.163.245"
     restart: unless-stopped
     command: sh -c "python manage.py makemigrations routine_app && until python manage.py migrate; do echo 'Banco indisponivel ou DNS nao resolveu; tentando novamente em 3s...'; sleep 3; done && python manage.py runserver 0.0.0.0:8000"
 

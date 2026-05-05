@@ -16,22 +16,6 @@ function hexToRgba(hex, alpha = 1) {
   return `rgba(${r}, ${g}, ${b}, ${alpha})`;
 }
 
-function getTextColor(backgroundHex) {
-  const cleanHex = backgroundHex?.replace('#', '');
-  if (!cleanHex || ![3, 6].includes(cleanHex.length)) return '#ffffff';
-
-  const normalizedHex = cleanHex.length === 3
-    ? cleanHex.split('').map((char) => char + char).join('')
-    : cleanHex;
-
-  const r = parseInt(normalizedHex.slice(0, 2), 16);
-  const g = parseInt(normalizedHex.slice(2, 4), 16);
-  const b = parseInt(normalizedHex.slice(4, 6), 16);
-  const luminance = (0.299 * r + 0.587 * g + 0.114 * b) / 255;
-
-  return luminance > 0.6 ? '#0f172a' : '#ffffff';
-}
-
 export default function RoutineChecklist({ routines, onToggle, onDelete, onEdit, onUpdateNotes, onReorder }) {
   const [draggedIndex, setDraggedIndex] = useState(null);
   const [dragOverIndex, setDragOverIndex] = useState(null);
@@ -79,10 +63,11 @@ export default function RoutineChecklist({ routines, onToggle, onDelete, onEdit,
     <div className="routine-list">
       {routines.map((routine, index) => {
         const taskColor = routine.color || '#2563eb';
-        const textColor = getTextColor(taskColor);
-        const secondaryTextColor = textColor === '#ffffff' ? 'rgba(255,255,255,0.85)' : 'rgba(15,23,42,0.72)';
-        const actionColor = textColor === '#ffffff' ? 'rgba(255,255,255,0.92)' : '#0f172a';
-        const cardBackground = routine.completed ? hexToRgba(taskColor, 0.45) : taskColor;
+        const textColor = '#1f2937';
+        const secondaryTextColor = '#64748b';
+        const actionColor = hexToRgba(taskColor, 0.86);
+        const cardBackground = hexToRgba(taskColor, routine.completed ? 0.2 : 0.12);
+        const cardBorder = `2px dashed ${hexToRgba(taskColor, routine.completed ? 0.48 : 0.65)}`;
         const isDragging = draggedIndex === index;
         const isDragOver = dragOverIndex === index;
 
@@ -92,10 +77,10 @@ export default function RoutineChecklist({ routines, onToggle, onDelete, onEdit,
               className={`routine-item ${routine.completed ? 'completed' : ''}`}
               style={{
                 backgroundColor: cardBackground,
-                border: 'none',
-                opacity: isDragging ? 0.5 : 1,
-                borderTop: isDragOver ? `3px solid ${textColor}` : 'none',
-                transition: 'opacity 0.2s, border-top 0.2s',
+                border: cardBorder,
+                opacity: isDragging ? 0.5 : (routine.completed ? 0.88 : 1),
+                borderTop: isDragOver ? `3px solid ${hexToRgba(taskColor, 0.85)}` : cardBorder,
+                transition: 'opacity 0.2s, border-top 0.2s, background-color 0.2s',
                 cursor: 'grab'
               }}
               draggable="true"
@@ -122,7 +107,7 @@ export default function RoutineChecklist({ routines, onToggle, onDelete, onEdit,
                   style={{ background: 'none', border: 'none', color: actionColor, cursor: 'pointer', display: 'flex', alignItems: 'center', padding: '5px' }}
                   title="Adicionar Observacao"
                 >
-                  <MessageSquare size={18} fill={routine.notes ? 'rgba(255, 255, 255, 0.3)' : 'none'} />
+                  <MessageSquare size={18} fill={routine.notes ? hexToRgba(taskColor, 0.2) : 'none'} />
                 </button>
                 <Edit2 size={18} className="action-icon" style={{ color: actionColor }} onClick={(e) => { e.stopPropagation(); onEdit(routine.id); }} />
                 <Trash2 size={18} className="action-icon" style={{ color: actionColor }} onClick={(e) => { e.stopPropagation(); onDelete(routine.id); }} />
@@ -141,12 +126,13 @@ export default function RoutineChecklist({ routines, onToggle, onDelete, onEdit,
                 marginRight: '15px',
                 marginBottom: '10px',
                 padding: '8px 12px',
-                background: '#f8fafc',
+                background: hexToRgba(taskColor, 0.09),
                 borderRadius: '8px',
                 fontSize: '12px',
                 color: 'var(--text-muted)',
                 fontStyle: 'italic',
-                borderLeft: `3px solid ${taskColor}`,
+                border: `1px dashed ${hexToRgba(taskColor, 0.4)}`,
+                borderLeft: `3px solid ${hexToRgba(taskColor, 0.7)}`,
                 boxShadow: 'inset 0 1px 2px rgba(0,0,0,0.02)'
               }}>
                 "{routine.notes}"
