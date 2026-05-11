@@ -7,6 +7,8 @@ const COLOR_OPTIONS = [
   { key: 'red',    label: 'Vermelho', bg: 'linear-gradient(135deg, #ef4444 0%, #dc2626 100%)', shadow: 'rgba(239,68,68,0.4)',   border: '#fca5a5', solid: '#ef4444' },
 ];
 
+const TOTAL_DAYS = 50;
+
 function getColor(key) {
   return COLOR_OPTIONS.find(c => c.key === key) || COLOR_OPTIONS[0];
 }
@@ -93,13 +95,13 @@ export default function DesafioScreen({ API_URL }) {
       {/* Header */}
       <div style={{ textAlign: 'center', marginBottom: '20px' }}>
         <h2 style={{ fontSize: '24px', fontWeight: '800', color: '#065f46', margin: '0 0 4px 0' }}>
-          🎯 Desafio 30 Dias
+          🎯 Desafio 50 Dias
         </h2>
         <p style={{ color: '#6b7280', fontSize: '13px', margin: 0 }}>
-          {markedCount} / 30 concluídos
+          {markedCount} / {TOTAL_DAYS} concluídos
         </p>
         <div style={{ marginTop: '10px', height: '8px', background: '#d1fae5', borderRadius: '999px', overflow: 'hidden' }}>
-          <div style={{ height: '100%', width: `${(markedCount / 30) * 100}%`, background: 'linear-gradient(90deg, #10b981, #059669)', borderRadius: '999px', transition: 'width 0.4s ease' }} />
+          <div style={{ height: '100%', width: `${(markedCount / TOTAL_DAYS) * 100}%`, background: 'linear-gradient(90deg, #10b981, #059669)', borderRadius: '999px', transition: 'width 0.4s ease' }} />
         </div>
       </div>
 

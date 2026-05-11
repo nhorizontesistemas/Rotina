@@ -142,7 +142,7 @@ class DesafioItemViewSet(viewsets.ModelViewSet):
 
     def list(self, request, *args, **kwargs):
         existing = set(DesafioItem.objects.values_list('number', flat=True))
-        missing = [i for i in range(1, 31) if i not in existing]
+        missing = [i for i in range(1, 51) if i not in existing]
         if missing:
             DesafioItem.objects.bulk_create([DesafioItem(number=i) for i in missing])
         return super().list(request, *args, **kwargs)
